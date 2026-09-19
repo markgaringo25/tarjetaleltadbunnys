@@ -1,0 +1,26 @@
+{
+  "name": "Bunny's INK Tattoos",
+  "short_name": "Bunny's INK",
+  "description": "Tarjeta de lealtad digital de Bunny's INK Tattoos",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#d3111b",
+  "icons": [
+    {
+      "src": "./icon192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "./",
+  "scope": "./",
+  "orientation": "portrait"
+}
