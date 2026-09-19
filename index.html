@@ -64,13 +64,14 @@
       top: 0;
       left: 0;
       right: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
     }
 
     .view {
       display: none;
       flex-direction: column;
       height: 100%;
-      padding: 20px;
+      padding: 60px 20px 20px 20px;
       z-index: 2;
       overflow-y: auto;
     }
@@ -139,7 +140,7 @@
       font-weight: bold;
       cursor: pointer;
       text-align: left;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
     }
 
     .form-group {
@@ -193,20 +194,38 @@
 
     <!-- INICIO -->
     <div id="view-home" class="view active">
-      <img src="portada.jpg" alt="Bunny's INK Portada" class="home-bg-image">
+      <img src="portada.jpg" alt="Bunny's INK Portada" class="home-bg-image" onerror="this.src='portada.png'">
 
       <div class="action-container">
-        <button class="btn btn-primary" onclick="switchView('view-register')">Iniciar sesión</button>
+        <button class="btn btn-primary" onclick="switchView('view-login')">Iniciar sesión</button>
         <button class="btn btn-secondary" onclick="switchView('view-register')">Registrarse</button>
       </div>
     </div>
 
-    <!-- REGISTRO / LOGIN -->
+    <!-- INICIAR SESIÓN -->
+    <div id="view-login" class="view">
+      <button class="btn-back" onclick="switchView('view-home')">← Volver</button>
+      <h2 style="margin-bottom: 20px;">Iniciar Sesión</h2>
+
+      <form onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" required placeholder="cliente@email.com">
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top: 15px;">Ingresar</button>
+      </form>
+    </div>
+
+    <!-- REGISTRO -->
     <div id="view-register" class="view">
       <button class="btn-back" onclick="switchView('view-home')">← Volver</button>
-      <h2 style="margin-bottom: 20px;">Acceso de Cliente</h2>
+      <h2 style="margin-bottom: 20px;">Registro de Cliente</h2>
 
-      <form id="registerForm" onsubmit="handleRegister(event)">
+      <form onsubmit="handleRegister(event)">
         <div class="form-group">
           <label>Nombre Completo</label>
           <input type="text" required placeholder="Ej. Carlos Mendoza">
@@ -223,7 +242,7 @@
           <label>Contraseña</label>
           <input type="password" required placeholder="••••••••">
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top: 15px;">Ingresar</button>
+        <button type="submit" class="btn btn-primary" style="margin-top: 15px;">Crear Cuenta</button>
       </form>
     </div>
 
@@ -244,7 +263,7 @@
     <!-- CONFIRMACIÓN -->
     <div id="view-success" class="view" style="text-align: center; justify-content: center; align-items: center;">
       <span style="font-size: 60px;">✅</span>
-      <h2 style="margin-top: 15px;">¡Registro Exitoso!</h2>
+      <h2 style="margin-top: 15px;">¡Bienvenido!</h2>
       <p style="color: #aaa; margin: 10px 0 25px; font-size: 14px;" id="welcome-msg"></p>
       <button class="btn btn-primary" onclick="switchView('view-home')">Ir al Inicio</button>
     </div>
@@ -256,13 +275,24 @@
 
     function switchView(viewId) {
       document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
-      document.getElementById(viewId).classList.add('active');
+      const targetView = document.getElementById(viewId);
+      if (targetView) {
+        targetView.classList.add('active');
+      }
 
       if (viewId === 'view-qr') {
         startQRScanner();
       } else if (html5QrCode && html5QrCode.isScanning) {
         html5QrCode.stop();
       }
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      const email = event.target[0].value;
+      document.getElementById('welcome-msg').innerText = Has iniciado sesión correctamente con ${email}.;
+      switchView('view-success');
+      event.target.reset();
     }
 
     function handleRegister(event) {
