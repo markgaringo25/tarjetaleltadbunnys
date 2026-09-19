@@ -443,141 +443,191 @@
     }
 
   
-    /* ===== BUNNY'S INK: SELLOS FUEGO + FLIP 3D LENTO ===== */
+    /* ===== BUNNY'S INK: CALAVERAS 3D + FUEGO ROJO ===== */
     .stamp-grid {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 10px;
       margin: 16px 0;
-      perspective: 1100px;
+      perspective: 1200px;
     }
 
     .stamp {
       aspect-ratio: 1;
+      min-width: 0;
       border-radius: 13px;
-      border: 2px solid #4a4a4a;
+      border: 2px solid #494949;
       display: flex;
       justify-content: center;
       align-items: center;
-      background: radial-gradient(circle at 50% 42%, #171717 0%, #090909 68%, #030303 100%);
       position: relative;
       overflow: visible;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 50% 38%, #1b1b1b 0%, #0c0c0c 58%, #040404 100%);
+      box-shadow: inset 0 0 12px rgba(255,255,255,.025);
       transform-style: preserve-3d;
       font-size: 0;
-      box-shadow: inset 0 0 10px rgba(255,255,255,.025);
     }
 
-    /* Casilla pendiente */
+    /* Sello pendiente */
     .stamp::before {
       content: "🐰";
-      display: inline-block;
-      font-size: 21px;
-      opacity: .16;
+      display: block;
+      font-size: clamp(18px, 5.8vw, 25px);
+      line-height: 1;
+      opacity: .14;
       filter: grayscale(1);
-      transform-style: preserve-3d;
-      backface-visibility: visible;
     }
 
-    /* Casilla obtenida: el cuadro es el que se ilumina como fuego */
+    /* Sello conseguido: marco rojo vivo */
     .stamp.filled {
-      border-color: #ff1825;
-      background: radial-gradient(circle at 50% 42%, #1b1010 0%, #0d0808 58%, #050505 100%);
-      animation: fireBox 5.4s ease-in-out infinite;
+      border-color: #ff2632;
+      background:
+        radial-gradient(circle at 50% 42%, #211010 0%, #100909 56%, #050505 100%);
+      animation: fireFrame 6.4s ease-in-out infinite;
     }
 
+    /* Aura exterior: el fuego pertenece al cuadro, no a la calavera */
     .stamp.filled::after {
       content: "";
       position: absolute;
-      inset: -5px;
-      border-radius: 16px;
-      pointer-events: none;
+      inset: -7px;
+      border-radius: 18px;
       z-index: -1;
-      opacity: .50;
+      pointer-events: none;
       background:
-        radial-gradient(circle at 18% 85%, rgba(255,35,20,.34), transparent 27%),
-        radial-gradient(circle at 72% 12%, rgba(255,20,20,.28), transparent 31%),
-        radial-gradient(circle at 92% 72%, rgba(255,70,15,.22), transparent 26%);
+        radial-gradient(ellipse at 15% 88%, rgba(255,38,16,.48) 0 5%, transparent 31%),
+        radial-gradient(ellipse at 46% 4%, rgba(255,20,20,.36) 0 4%, transparent 29%),
+        radial-gradient(ellipse at 83% 16%, rgba(255,75,12,.30) 0 4%, transparent 27%),
+        radial-gradient(ellipse at 94% 78%, rgba(220,0,0,.34) 0 5%, transparent 30%);
       filter: blur(7px);
-      animation: fireAura 6.2s ease-in-out infinite;
+      opacity: .55;
+      animation: fireBreath 7.2s ease-in-out infinite;
     }
 
-    /* La calavera gira lentamente de forma constante */
+    /*
+      CALAVERA 3D:
+      No usamos rotateY(90/180/360), porque un emoji es una lámina 2D y
+      se convertiría visualmente en media calavera/una línea.
+      Este flip simula profundidad con inclinación, escala X, elevación
+      y sombra, manteniendo SIEMPRE la calavera completa.
+    */
     .stamp.filled::before {
       content: "💀";
+      display: block;
       opacity: 1;
-      font-size: 27px;
-      filter: grayscale(1) contrast(1.3);
-      text-shadow: none;
-      display: inline-block;
+      font-size: clamp(25px, 7.4vw, 34px);
+      line-height: 1;
+      transform-origin: 50% 55%;
       transform-style: preserve-3d;
       backface-visibility: visible;
-      animation: skullSlowFlip 8s linear infinite;
+      filter:
+        grayscale(1)
+        contrast(1.24)
+        drop-shadow(0 3px 1px rgba(0,0,0,.78))
+        drop-shadow(0 -1px 1px rgba(255,255,255,.18));
+      text-shadow: none;
+      animation: skull3DFlip 9.5s ease-in-out infinite;
+      will-change: transform, filter;
     }
 
-    /* Desfase entre las 10 calaveras */
-    .stamp.filled:nth-child(1)::before  { animation-delay: 0s; }
-    .stamp.filled:nth-child(2)::before  { animation-delay: -0.8s; }
-    .stamp.filled:nth-child(3)::before  { animation-delay: -1.6s; }
-    .stamp.filled:nth-child(4)::before  { animation-delay: -2.4s; }
-    .stamp.filled:nth-child(5)::before  { animation-delay: -3.2s; }
-    .stamp.filled:nth-child(6)::before  { animation-delay: -4.0s; }
-    .stamp.filled:nth-child(7)::before  { animation-delay: -4.8s; }
-    .stamp.filled:nth-child(8)::before  { animation-delay: -5.6s; }
-    .stamp.filled:nth-child(9)::before  { animation-delay: -6.4s; }
-    .stamp.filled:nth-child(10)::before { animation-delay: -7.2s; }
+    /* Flip desfasado: nunca giran todas a la vez */
+    .stamp.filled:nth-child(1)::before  { animation-delay:  0s; }
+    .stamp.filled:nth-child(2)::before  { animation-delay: -0.95s; }
+    .stamp.filled:nth-child(3)::before  { animation-delay: -1.90s; }
+    .stamp.filled:nth-child(4)::before  { animation-delay: -2.85s; }
+    .stamp.filled:nth-child(5)::before  { animation-delay: -3.80s; }
+    .stamp.filled:nth-child(6)::before  { animation-delay: -4.75s; }
+    .stamp.filled:nth-child(7)::before  { animation-delay: -5.70s; }
+    .stamp.filled:nth-child(8)::before  { animation-delay: -6.65s; }
+    .stamp.filled:nth-child(9)::before  { animation-delay: -7.60s; }
+    .stamp.filled:nth-child(10)::before { animation-delay: -8.55s; }
 
-    /* También se desfasa el resplandor de cada cuadro */
-    .stamp.filled:nth-child(2n) { animation-delay: -1.3s; }
-    .stamp.filled:nth-child(3n) { animation-delay: -2.6s; }
-    .stamp.filled:nth-child(4n) { animation-delay: -3.9s; }
+    /* También desfasamos el fuego */
+    .stamp.filled:nth-child(2n) { animation-delay: -1.7s; }
+    .stamp.filled:nth-child(3n) { animation-delay: -3.1s; }
+    .stamp.filled:nth-child(4n) { animation-delay: -4.4s; }
 
-    /* El sello recién agregado conserva un pequeño golpe visual */
-    .stamp.flip {
-      animation: newStampPulse .85s ease-out, fireBox 5.4s .85s ease-in-out infinite;
-    }
+    .stamp.filled:nth-child(2n)::after { animation-delay: -1.2s; }
+    .stamp.filled:nth-child(3n)::after { animation-delay: -2.7s; }
+    .stamp.filled:nth-child(5n)::after { animation-delay: -4.1s; }
 
-    @keyframes skullSlowFlip {
-      from { transform: rotateY(0deg); }
-      to   { transform: rotateY(360deg); }
-    }
-
-    @keyframes fireBox {
+    /* Movimiento lento que simula una calavera con volumen sin ocultar ninguna mitad */
+    @keyframes skull3DFlip {
       0%, 100% {
-        border-color: #d3111b;
-        box-shadow:
-          0 0 5px rgba(211,17,27,.42),
-          0 0 11px rgba(255,20,20,.18),
-          inset 0 0 8px rgba(255,25,25,.08);
+        transform: perspective(260px) rotateX(0deg) rotateZ(0deg) scaleX(1) scaleY(1) translateY(0);
       }
-      50% {
-        border-color: #ff2835;
-        box-shadow:
-          0 0 9px rgba(255,25,35,.82),
-          0 0 20px rgba(255,20,20,.42),
-          0 0 30px rgba(180,0,0,.18),
-          inset 0 0 13px rgba(255,30,30,.15);
+      18% {
+        transform: perspective(260px) rotateX(8deg) rotateZ(-3deg) scaleX(.90) scaleY(1.03) translateY(-1px);
+      }
+      36% {
+        transform: perspective(260px) rotateX(-4deg) rotateZ(2deg) scaleX(1.04) scaleY(.98) translateY(-2px);
+      }
+      54% {
+        transform: perspective(260px) rotateX(10deg) rotateZ(3deg) scaleX(.88) scaleY(1.04) translateY(-1px);
+      }
+      72% {
+        transform: perspective(260px) rotateX(-5deg) rotateZ(-2deg) scaleX(1.03) scaleY(.99) translateY(-2px);
+      }
+      88% {
+        transform: perspective(260px) rotateX(4deg) rotateZ(1deg) scaleX(.94) scaleY(1.02) translateY(-1px);
       }
     }
 
-    @keyframes fireAura {
+    @keyframes fireFrame {
       0%, 100% {
-        transform: scale(.96) translateY(1px);
-        opacity: .28;
+        border-color: #d91621;
+        box-shadow:
+          0 0 5px rgba(220,15,28,.48),
+          0 0 12px rgba(255,25,25,.18),
+          inset 0 0 9px rgba(255,28,28,.07);
       }
       35% {
-        transform: scale(1.03) translateY(-2px);
-        opacity: .62;
+        border-color: #ff2632;
+        box-shadow:
+          0 0 8px rgba(255,25,35,.78),
+          0 0 18px rgba(255,20,20,.34),
+          0 0 27px rgba(180,0,0,.15),
+          inset 0 0 13px rgba(255,35,35,.12);
       }
-      70% {
-        transform: scale(.99) translateY(0);
-        opacity: .42;
+      68% {
+        border-color: #f01825;
+        box-shadow:
+          0 0 11px rgba(255,32,32,.62),
+          0 0 22px rgba(210,0,0,.27),
+          inset 0 0 11px rgba(255,25,25,.10);
       }
     }
 
-    @keyframes newStampPulse {
-      0%   { transform: scale(.78); }
-      55%  { transform: scale(1.10); }
-      100% { transform: scale(1); }
+    @keyframes fireBreath {
+      0%, 100% {
+        transform: scale(.95) translateY(2px);
+        opacity: .28;
+      }
+      28% {
+        transform: scale(1.03) translateY(-2px);
+        opacity: .60;
+      }
+      56% {
+        transform: scale(.99) translateY(0);
+        opacity: .38;
+      }
+      78% {
+        transform: scale(1.05) translateY(-3px);
+        opacity: .53;
+      }
+    }
+
+    /* El sello nuevo entra con fuerza, después continúa su animación normal */
+    .stamp.flip {
+      animation: newStampArrival .9s ease-out, fireFrame 6.4s .9s ease-in-out infinite;
+    }
+
+    @keyframes newStampArrival {
+      0%   { transform: scale(.76); opacity: .45; }
+      55%  { transform: scale(1.10); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
     }
 
     @media (prefers-reduced-motion: reduce) {
