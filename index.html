@@ -14,282 +14,9 @@
   <!-- Librería QR -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
-  <!-- Supabase -->
+  <!-- Supabase JS: debe cargarse ANTES de crear el cliente -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script>
-/* ==========================================
-   CONFIGURACIÓN SUPABASE
-========================================== */
-
-const SUPABASE_URL = "https://zggngzzaxnujwbrhnabb.supabase.co";
-const SUPABASE_KEY = "sb_publishable_cQo_VuJAObijc1MTmuV_uw_6heHIoa3";
-
-const sb = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
-
-console.log("Supabase conectado");
-
-
-/* ==========================================
-   CAMBIAR DE PANTALLA
-========================================== */
-
-window.switchView = function(viewId) {
-
-    console.log("Abriendo pantalla:", viewId);
-
-    document.querySelectorAll(".view").forEach(function(view) {
-        view.classList.remove("active");
-    });
-
-    const target = document.getElementById(viewId);
-
-    if (target) {
-        target.classList.add("active");
-    } else {
-        console.error("No existe la pantalla:", viewId);
-    }
-};
-
-
-/* ==========================================
-   REGISTRAR CLIENTE
-========================================== */
-
-window.handleRegister = async function(event) {
-
-    event.preventDefault();
-
-    const name =
-        document.getElementById("register-name").value.trim();
-
-    const email =
-        document.getElementById("register-email").value.trim();
-
-    const phone =
-        document.getElementById("register-phone").value.trim();
-
-    const password =
-        document.getElementById("register-password").value;
-
-    if (!name || !email || !phone || !password) {
-        alert("Completa todos los campos.");
-        return;
-    }
-
-    if (password.length < 6) {
-        alert("La contraseña debe tener mínimo 6 caracteres.");
-        return;
-    }
-
-    try {
-
-        const { data, error } = await sb.auth.signUp({
-            email: email,
-            password: password,
-
-            options: {
-                data: {
-                    full_name: name,
-                    phone: phone
-                }
-            }
-        });
-
-        if (error) {
-            console.error("Error Supabase:", error);
-            alert("No se pudo crear la cuenta: " + error.message);
-            return;
-        }
-
-        console.log("Usuario registrado:", data);
-
-        document.getElementById("welcome-msg").textContent =
-            "Bienvenido a Bunny's INK, " +
-            name +
-            ". Tu cuenta fue creada correctamente.";
-
-        switchView("view-success");
-
-        event.target.reset();
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Ocurrió un error al conectar con Supabase."
-        );
-    }
-};
-
-
-/* ==========================================
-   INICIAR SESIÓN
-========================================== */
-
-window.handleLogin = async function(event) {
-
-    event.preventDefault();
-
-    const email =
-        document.getElementById("login-email").value.trim();
-
-    const password =
-        document.getElementById("login-password").value;
-
-    if (!email || !password) {
-        alert("Escribe tu correo y contraseña.");
-        return;
-    }
-
-    try {
-
-        const { data, error } =
-            await sb.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-
-        if (error) {
-
-            console.error(
-                "Error al iniciar sesión:",
-                error
-            );
-
-            alert(
-                "No se pudo iniciar sesión: " +
-                error.message
-            );
-
-            return;
-        }
-
-        console.log(
-            "Sesión iniciada:",
-            data.user
-        );
-
-        const nombre =
-            data.user.user_metadata?.full_name ||
-            data.user.email;
-
-        document.getElementById(
-            "welcome-msg"
-        ).textContent =
-            "Bienvenido a Bunny's INK, " +
-            nombre +
-            ".";
-
-        switchView("view-success");
-
-        event.target.reset();
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Ocurrió un error al conectar con Supabase."
-        );
-    }
-};
-
-
-/* ==========================================
-   CERRAR SESIÓN
-========================================== */
-
-window.logout = async function() {
-
-    const { error } =
-        await sb.auth.signOut();
-
-    if (error) {
-
-        console.error(error);
-
-        alert(
-            "No se pudo cerrar la sesión."
-        );
-
-        return;
-    }
-
-    console.log(
-        "Sesión cerrada"
-    );
-
-    switchView("view-home");
-};
-
-
-/* ==========================================
-   COMPROBAR SESIÓN EXISTENTE
-========================================== */
-
-async function comprobarSesion() {
-
-    const { data, error } =
-        await sb.auth.getSession();
-
-    if (error) {
-        console.error(
-            "Error comprobando sesión:",
-            error
-        );
-        return;
-    }
-
-    if (data.session) {
-
-        console.log(
-            "Usuario ya conectado:",
-            data.session.user
-        );
-
-    } else {
-
-        console.log(
-            "No existe una sesión activa."
-        );
-    }
-}
-
-
-/* ==========================================
-   PRUEBA DE CONEXIÓN
-========================================== */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    async function() {
-
-        console.log(
-            "Bunny's INK cargado."
-        );
-
-        if (!window.supabase) {
-
-            console.error(
-                "La librería de Supabase no cargó."
-            );
-
-            return;
-        }
-
-        console.log(
-            "Cliente Supabase listo."
-        );
-
-        await comprobarSesion();
-    }
-);
-</script>
-  
   <style>
 
     :root {
@@ -1014,492 +741,309 @@ document.addEventListener(
 
 
 <script>
+  /* ========================================
+     CONFIGURACIÓN
+  ======================================== */
 
-  /*
-  ========================================
-  VARIABLES
-  ========================================
-  */
+  const SUPABASE_URL = "https://zggngzzaxnujwbrhnabb.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_cQo_VuJAObijc1MTmuV_uw_6heHIoa3";
 
+  let sb = null;
   let html5QrCode = null;
 
-
-  /*
-  ========================================
-  CAMBIAR DE PANTALLA
-  ========================================
-  */
-
-  function switchView(viewId) {
-
-    console.log(
-      "Cambiando a:",
-      viewId
-    );
+  if (window.supabase && typeof window.supabase.createClient === "function") {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log("✅ Supabase conectado correctamente");
+  } else {
+    console.error("❌ No se pudo cargar la librería de Supabase");
+  }
 
 
-    const views =
-      document.querySelectorAll('.view');
+  /* ========================================
+     NAVEGACIÓN
+  ======================================== */
 
-
-    views.forEach(function(view) {
-
-      view.classList.remove('active');
-
+  window.switchView = function(viewId) {
+    document.querySelectorAll(".view").forEach(function(view) {
+      view.classList.remove("active");
     });
 
+    const target = document.getElementById(viewId);
 
-    const targetView =
-      document.getElementById(viewId);
-
-
-    if (!targetView) {
-
-      console.error(
-        "No existe la pantalla:",
-        viewId
-      );
-
+    if (!target) {
+      console.error("No existe la pantalla:", viewId);
       return;
-
     }
 
-
-    targetView.classList.add('active');
-
-
-    /*
-    Iniciar lector QR
-    solamente cuando abrimos
-    esa pantalla.
-    */
-
-    if (viewId === 'view-qr') {
-
-      setTimeout(function() {
-
-        startQRScanner();
-
-      }, 300);
-
-    } else {
-
-      stopQRScanner();
-
-    }
-
-  }
-
-
-  /*
-  ========================================
-  INICIAR SESIÓN
-  ========================================
-  */
-
-  function handleLogin(event) {
-
-    event.preventDefault();
-
-
-    const email =
-      document.getElementById(
-        'login-email'
-      ).value.trim();
-
-
-    if (!email) {
-
-      alert(
-        'Escribe tu correo electrónico.'
-      );
-
-      return;
-
-    }
-
-
-    document.getElementById(
-      'welcome-msg'
-    ).textContent =
-      'Has iniciado sesión correctamente con ' +
-      email +
-      '.';
-
-
-    switchView(
-      'view-success'
-    );
-
-
-    event.target.reset();
-
-  }
-
-
-  /*
-  ========================================
-  REGISTRAR CLIENTE
-  ========================================
-  */
-
-  function handleRegister(event) {
-
-    event.preventDefault();
-
-
-    const name =
-      document.getElementById(
-        'register-name'
-      ).value.trim();
-
-
-    const email =
-      document.getElementById(
-        'register-email'
-      ).value.trim();
-
-
-    const phone =
-      document.getElementById(
-        'register-phone'
-      ).value.trim();
-
-
-    const password =
-      document.getElementById(
-        'register-password'
-      ).value;
-
-
-    if (
-      !name ||
-      !email ||
-      !phone ||
-      !password
-    ) {
-
-      alert(
-        'Completa todos los campos.'
-      );
-
-      return;
-
-    }
-
-
-    document.getElementById(
-      'welcome-msg'
-    ).textContent =
-      'Bienvenido a Bunny\'s INK, ' +
-      name +
-      '. Tu registro se realizó correctamente.';
-
-
-    switchView(
-      'view-success'
-    );
-
-
-    event.target.reset();
-
-  }
-
-
-  /*
-  ========================================
-  INICIAR ESCÁNER QR
-  ========================================
-  */
-
-  async function startQRScanner() {
-
-    const result =
-      document.getElementById(
-        'qr-result'
-      );
-
-
-    const qrText =
-      document.getElementById(
-        'qr-text'
-      );
-
-
-    result.style.display =
-      'none';
-
-
-    /*
-    Comprobar que la librería cargó.
-    */
-
-    if (
-      typeof Html5Qrcode ===
-      'undefined'
-    ) {
-
-      result.style.display =
-        'block';
-
-
-      qrText.textContent =
-        'No se pudo cargar el lector QR. Comprueba tu conexión a Internet.';
-
-
-      return;
-
-    }
-
-
-    try {
-
-
-      if (!html5QrCode) {
-
-        html5QrCode =
-          new Html5Qrcode(
-            'reader'
-          );
-
-      }
-
-
-      /*
-      Evitar iniciar dos veces
-      la cámara.
-      */
-
-      if (html5QrCode.isScanning) {
-
-        return;
-
-      }
-
-
-      await html5QrCode.start(
-
-        {
-          facingMode:
-            'environment'
-        },
-
-        {
-          fps: 10,
-
-          qrbox: {
-            width: 220,
-            height: 220
-          }
-        },
-
-
-        function(decodedText) {
-
-          result.style.display =
-            'block';
-
-
-          qrText.textContent =
-            decodedText;
-
-        },
-
-
-        function() {
-
-          /*
-          Esta función se ejecuta
-          mientras busca un QR.
-          No necesitamos mostrar
-          los errores de lectura.
-          */
-
-        }
-
-      );
-
-
-    } catch (error) {
-
-
-      console.error(
-        'Error de cámara:',
-        error
-      );
-
-
-      result.style.display =
-        'block';
-
-
-      qrText.textContent =
-        'No se pudo abrir la cámara. Verifica que hayas dado permiso para usarla.';
-
-    }
-
-  }
-
-
-  /*
-  ========================================
-  DETENER ESCÁNER
-  ========================================
-  */
-
-  async function stopQRScanner() {
-
-    if (
-      html5QrCode &&
-      html5QrCode.isScanning
-    ) {
-
-      try {
-
-        await html5QrCode.stop();
-
-      } catch (error) {
-
-        console.log(
-          'El lector QR ya estaba detenido.'
-        );
-
-      }
-
-    }
-
-  }
-
-
-  /*
-  ========================================
-  VOLVER DESDE QR
-  ========================================
-  */
-
-  async function stopQRAndBack() {
-
-    await stopQRScanner();
-
-    switchView(
-      'view-home'
-    );
-
-  }
-
-
-  /*
-  ========================================
-  RELOJ
-  ========================================
-  */
-
-  function updateClock() {
-
-    const now =
-      new Date();
-
-
-    const time =
-      now.toLocaleTimeString(
-        'es-MX',
-        {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }
-      );
-
-
-    const clock =
-      document.getElementById(
-        'current-time'
-      );
-
-
-    if (clock) {
-
-      clock.textContent =
-        time;
-
-    }
-
-  }
-
-
-  updateClock();
-
-
-  setInterval(
-    updateClock,
-    30000
-  );
-
-
-  /*
-  ========================================
-  COMPROBACIÓN AL CARGAR
-  ========================================
-  */
-
-  document.addEventListener(
-    'DOMContentLoaded',
-    function() {
-
-      console.log(
-        "Bunny's INK cargado correctamente."
-      );
-
-    }
-  );
-
-
-</script>
-
-  <script>
-window.switchView = function(viewId) {
+    target.classList.add("active");
     console.log("Abriendo pantalla:", viewId);
 
-    document.querySelectorAll(".view").forEach(function(view) {
-        view.classList.remove("active");
-    });
-
-    var target = document.getElementById(viewId);
-
-    if (target) {
-        target.classList.add("active");
+    if (viewId === "view-qr") {
+      setTimeout(startQRScanner, 300);
     } else {
-        console.error("No existe la pantalla: " + viewId);
+      stopQRScanner();
     }
-};
+  };
 
-window.handleLogin = function(event) {
+
+  /* ========================================
+     REGISTRO REAL EN SUPABASE AUTH
+  ======================================== */
+
+  window.handleRegister = async function(event) {
     event.preventDefault();
 
-    var emailInput = document.querySelector("#view-login input[type='email']");
+    if (!sb) {
+      alert("Supabase no está conectado. Abre la consola del navegador para revisar el error.");
+      return;
+    }
 
-    document.getElementById("welcome-msg").textContent =
-        "Has iniciado sesión correctamente con " +
-        emailInput.value +
-        ".";
+    const name = document.getElementById("register-name").value.trim();
+    const email = document.getElementById("register-email").value.trim();
+    const phone = document.getElementById("register-phone").value.trim();
+    const password = document.getElementById("register-password").value;
 
-    window.switchView("view-success");
-};
+    if (!name || !email || !phone || !password) {
+      alert("Completa todos los campos.");
+      return;
+    }
 
-window.handleRegister = function(event) {
+    if (password.length < 6) {
+      alert("La contraseña debe tener mínimo 6 caracteres.");
+      return;
+    }
+
+    const submitButton = event.submitter;
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Creando cuenta...";
+    }
+
+    try {
+      const { data, error } = await sb.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            phone: phone
+          }
+        }
+      });
+
+      if (error) {
+        console.error("Error de registro en Supabase:", error);
+        alert("No se pudo crear la cuenta: " + error.message);
+        return;
+      }
+
+      if (!data.user) {
+        console.error("Supabase no devolvió un usuario:", data);
+        alert("Supabase no devolvió el usuario. Revisa Authentication → Users.");
+        return;
+      }
+
+      console.log("✅ Usuario registrado en Supabase:", data.user);
+
+      document.getElementById("welcome-msg").textContent =
+        "Bienvenido a Bunny's INK, " + name + ". Tu cuenta fue creada correctamente.";
+
+      event.target.reset();
+      window.switchView("view-success");
+
+    } catch (error) {
+      console.error("Error inesperado registrando usuario:", error);
+      alert("Ocurrió un error al conectar con Supabase.");
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Crear Cuenta";
+      }
+    }
+  };
+
+
+  /* ========================================
+     INICIO DE SESIÓN REAL EN SUPABASE AUTH
+  ======================================== */
+
+  window.handleLogin = async function(event) {
     event.preventDefault();
 
-    var nameInput = document.querySelector("#view-register input[type='text']");
+    if (!sb) {
+      alert("Supabase no está conectado. Abre la consola del navegador para revisar el error.");
+      return;
+    }
 
-    document.getElementById("welcome-msg").textContent =
-        "Bienvenido a Bunny's INK, " +
-        nameInput.value +
-        ".";
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
 
-    window.switchView("view-success");
-};
+    if (!email || !password) {
+      alert("Escribe tu correo y contraseña.");
+      return;
+    }
 
-console.log("JavaScript Bunny's INK cargado correctamente");
+    const submitButton = event.submitter;
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Ingresando...";
+    }
+
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error("Error de inicio de sesión:", error);
+        alert("No se pudo iniciar sesión: " + error.message);
+        return;
+      }
+
+      const nombre =
+        data.user?.user_metadata?.full_name ||
+        data.user?.email ||
+        "cliente";
+
+      console.log("✅ Sesión iniciada:", data.user);
+
+      document.getElementById("welcome-msg").textContent =
+        "Bienvenido a Bunny's INK, " + nombre + ".";
+
+      event.target.reset();
+      window.switchView("view-success");
+
+    } catch (error) {
+      console.error("Error inesperado iniciando sesión:", error);
+      alert("Ocurrió un error al conectar con Supabase.");
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Ingresar";
+      }
+    }
+  };
+
+
+  /* ========================================
+     CERRAR SESIÓN
+  ======================================== */
+
+  window.logout = async function() {
+    if (!sb) return;
+
+    const { error } = await sb.auth.signOut();
+
+    if (error) {
+      console.error("Error cerrando sesión:", error);
+      alert("No se pudo cerrar la sesión.");
+      return;
+    }
+
+    window.switchView("view-home");
+  };
+
+
+  /* ========================================
+     ESCÁNER QR
+  ======================================== */
+
+  async function startQRScanner() {
+    const result = document.getElementById("qr-result");
+    const qrText = document.getElementById("qr-text");
+
+    result.style.display = "none";
+
+    if (typeof Html5Qrcode === "undefined") {
+      result.style.display = "block";
+      qrText.textContent =
+        "No se pudo cargar el lector QR. Comprueba tu conexión a Internet.";
+      return;
+    }
+
+    try {
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      if (html5QrCode.isScanning) return;
+
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 220, height: 220 }
+        },
+        function(decodedText) {
+          result.style.display = "block";
+          qrText.textContent = decodedText;
+        },
+        function() {}
+      );
+
+    } catch (error) {
+      console.error("Error de cámara:", error);
+      result.style.display = "block";
+      qrText.textContent =
+        "No se pudo abrir la cámara. Verifica que hayas dado permiso para usarla.";
+    }
+  }
+
+  async function stopQRScanner() {
+    if (html5QrCode && html5QrCode.isScanning) {
+      try {
+        await html5QrCode.stop();
+      } catch (error) {
+        console.log("El lector QR ya estaba detenido.");
+      }
+    }
+  }
+
+  window.stopQRAndBack = async function() {
+    await stopQRScanner();
+    window.switchView("view-home");
+  };
+
+
+  /* ========================================
+     RELOJ Y COMPROBACIÓN DE SESIÓN
+  ======================================== */
+
+  function updateClock() {
+    const clock = document.getElementById("current-time");
+    if (!clock) return;
+
+    clock.textContent = new Date().toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    });
+  }
+
+  async function comprobarSesion() {
+    if (!sb) return;
+
+    const { data, error } = await sb.auth.getSession();
+
+    if (error) {
+      console.error("Error comprobando sesión:", error);
+      return;
+    }
+
+    if (data.session) {
+      console.log("✅ Sesión activa:", data.session.user);
+    } else {
+      console.log("Sin sesión activa.");
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    console.log("✅ Bunny's INK cargado correctamente");
+    updateClock();
+    setInterval(updateClock, 30000);
+    comprobarSesion();
+  });
 </script>
 
 </body>
