@@ -1180,6 +1180,51 @@
 
 </script>
 
+  <script>
+window.switchView = function(viewId) {
+    console.log("Abriendo pantalla:", viewId);
+
+    document.querySelectorAll(".view").forEach(function(view) {
+        view.classList.remove("active");
+    });
+
+    var target = document.getElementById(viewId);
+
+    if (target) {
+        target.classList.add("active");
+    } else {
+        console.error("No existe la pantalla: " + viewId);
+    }
+};
+
+window.handleLogin = function(event) {
+    event.preventDefault();
+
+    var emailInput = document.querySelector("#view-login input[type='email']");
+
+    document.getElementById("welcome-msg").textContent =
+        "Has iniciado sesión correctamente con " +
+        emailInput.value +
+        ".";
+
+    window.switchView("view-success");
+};
+
+window.handleRegister = function(event) {
+    event.preventDefault();
+
+    var nameInput = document.querySelector("#view-register input[type='text']");
+
+    document.getElementById("welcome-msg").textContent =
+        "Bienvenido a Bunny's INK, " +
+        nameInput.value +
+        ".";
+
+    window.switchView("view-success");
+};
+
+console.log("JavaScript Bunny's INK cargado correctamente");
+</script>
 
 </body>
 </html>
