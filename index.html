@@ -442,6 +442,119 @@
       display: none !important;
     }
 
+  
+    /* ===== BUNNY'S INK: SELLOS FLIP + QR CON LOGO + RECOMPENSAS ===== */
+    .stamp-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 9px;
+      margin: 16px 0;
+      perspective: 900px;
+    }
+
+    .stamp {
+      aspect-ratio: 1;
+      border-radius: 10px;
+      border: 1.5px solid #4a4a4a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(145deg,#080808,#171717);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
+      transform-style: preserve-3d;
+      position: relative;
+      overflow: hidden;
+      font-size: 0;
+    }
+
+    .stamp::before {
+      content: "🐰";
+      font-size: 21px;
+      opacity: .16;
+      filter: grayscale(1);
+    }
+
+    .stamp.filled {
+      border-color: var(--primary-red);
+      background: radial-gradient(circle at 50% 38%, #2b2b2b 0%, #111 62%, #070707 100%);
+      box-shadow: 0 0 13px rgba(211,17,27,.30),
+                  inset 0 0 0 1px rgba(211,17,27,.25);
+    }
+
+    .stamp.filled::before {
+      content: "💀";
+      opacity: 1;
+      filter: grayscale(1) contrast(1.35);
+      font-size: 26px;
+      text-shadow: 0 0 8px rgba(255,255,255,.20);
+    }
+
+    .stamp.flip {
+      animation: skullFlip .72s cubic-bezier(.2,.75,.25,1);
+    }
+
+    @keyframes skullFlip {
+      0%   { transform: rotateY(0deg) scale(.82); }
+      48%  { transform: rotateY(180deg) scale(1.10); }
+      100% { transform: rotateY(360deg) scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stamp.flip { animation: none; }
+    }
+
+    .qr-box {
+      position: relative;
+      background: #fff;
+      padding: 12px;
+      border-radius: 16px;
+      width: fit-content;
+      margin: 15px auto;
+      box-shadow: 0 0 22px rgba(211,17,27,.18);
+    }
+
+    .qr-center-logo {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 38px;
+      height: 38px;
+      transform: translate(-50%,-50%);
+      object-fit: contain;
+      background: #fff;
+      border: 4px solid #fff;
+      border-radius: 9px;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .reward-actions {
+      display: grid;
+      gap: 9px;
+      margin-top: 15px;
+      padding-top: 14px;
+      border-top: 1px solid #333;
+    }
+
+    .reward-title {
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 3px;
+    }
+
+    .reward-note {
+      color: #aaa;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .btn:disabled {
+      opacity: .38;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
   </style>
 </head>
 
@@ -816,15 +929,37 @@
       <p id="admin-stamp-count" style="text-align:center;font-weight:700;"></p>
 
       <div class="admin-actions">
-        <button type="button" class="btn btn-secondary" onclick="changeStamp('remove')">
+        <button id="remove-stamp-btn" type="button" class="btn btn-secondary" onclick="changeStamp('remove')">
           ➖ Quitar
         </button>
-        <button type="button" class="btn btn-primary" onclick="changeStamp('add')">
+        <button id="add-stamp-btn" type="button" class="btn btn-primary" onclick="changeStamp('add')">
           ➕ Agregar
         </button>
       </div>
 
       <p id="admin-operation-msg" class="small-muted" style="text-align:center;margin-top:12px;"></p>
+
+      <div id="admin-rewards" class="reward-actions hidden">
+        <div>
+          <div class="reward-title">🎁 Recompensas</div>
+          <div id="admin-reward-status" class="reward-note"></div>
+        </div>
+
+        <button id="redeem-5-btn" type="button" class="btn btn-secondary hidden"
+                onclick="redeemReward('tattoo_5cm')">
+          Canjear tatuaje de 5 cm
+        </button>
+
+        <button id="redeem-15-btn" type="button" class="btn btn-primary hidden"
+                onclick="redeemReward('tattoo_15cm')">
+          Canjear tatuaje de 15 cm GRATIS
+        </button>
+
+        <button id="redeem-30-btn" type="button" class="btn btn-secondary hidden"
+                onclick="redeemReward('discount_30')">
+          Aplicar 30% de descuento
+        </button>
+      </div>
     </div>
   </div>
 
@@ -840,6 +975,7 @@
   let currentProfile = null;
   let currentAdminCardId = null;
   let qrBusy = false;
+  let lastAdminStamps = null;
 
   if (window.supabase && typeof window.supabase.createClient === "function") {
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -875,13 +1011,23 @@
     return "Te faltan " + (5 - stamps) + " sello(s) para tu primera recompensa.";
   }
 
-  function renderStamps(containerId, stamps) {
+  function renderStamps(containerId, stamps, animateIndex = null) {
     const box = document.getElementById(containerId);
     box.innerHTML = "";
+
     for (let i = 1; i <= 10; i++) {
       const item = document.createElement("div");
       item.className = "stamp" + (i <= stamps ? " filled" : "");
-      item.textContent = i <= stamps ? "✓" : i;
+
+      if (animateIndex === i && i <= stamps) {
+        item.classList.add("flip");
+      }
+
+      item.setAttribute(
+        "aria-label",
+        i <= stamps ? "Sello " + i + " obtenido" : "Sello " + i + " pendiente"
+      );
+
       box.appendChild(item);
     }
   }
@@ -941,12 +1087,21 @@
 
       const qrBox = document.getElementById("client-qr");
       qrBox.innerHTML = "";
+
       if (typeof QRCode !== "undefined") {
         new QRCode(qrBox, {
           text: "BUNNYS_CARD:" + card.id,
-          width: 180,
-          height: 180
+          width: 190,
+          height: 190,
+          correctLevel: QRCode.CorrectLevel.H
         });
+
+        const qrLogo = document.createElement("img");
+        qrLogo.src = "logo.png";
+        qrLogo.alt = "Bunny's Ink";
+        qrLogo.className = "qr-center-logo";
+        qrLogo.onerror = function() { this.style.display = "none"; };
+        qrBox.appendChild(qrLogo);
       } else {
         qrBox.textContent = "No se pudo generar el QR.";
       }
@@ -1028,6 +1183,71 @@
     window.switchView("view-home");
   };
 
+  async function getCardRewards(cardId) {
+    const { data, error } = await sb
+      .from("customer_rewards")
+      .select("reward_type, redeemed, redeemed_at")
+      .eq("card_id", cardId);
+
+    if (error) {
+      console.warn("No se pudo consultar customer_rewards:", error);
+      return [];
+    }
+    return data || [];
+  }
+
+  async function updateAdminControls(card) {
+    const addBtn = document.getElementById("add-stamp-btn");
+    const removeBtn = document.getElementById("remove-stamp-btn");
+    const rewardsBox = document.getElementById("admin-rewards");
+    const status = document.getElementById("admin-reward-status");
+    const btn5 = document.getElementById("redeem-5-btn");
+    const btn15 = document.getElementById("redeem-15-btn");
+    const btn30 = document.getElementById("redeem-30-btn");
+
+    addBtn.disabled = card.stamps >= 10 || card.status !== "active";
+    removeBtn.disabled = card.stamps <= 0 || card.status !== "active";
+
+    [btn5, btn15, btn30].forEach(btn => btn.classList.add("hidden"));
+    rewardsBox.classList.add("hidden");
+    status.textContent = "";
+
+    if (card.status !== "active" || card.stamps < 5) return;
+
+    rewardsBox.classList.remove("hidden");
+    const rewards = await getCardRewards(card.id);
+    const reward5 = rewards.find(r => r.reward_type === "tattoo_5cm");
+    const reward5Used = reward5?.redeemed === true;
+    const finalUsed = rewards.some(r =>
+      (r.reward_type === "tattoo_15cm" || r.reward_type === "discount_30") &&
+      r.redeemed === true
+    );
+
+    if (card.stamps >= 5 && card.stamps < 10) {
+      if (reward5Used) {
+        status.textContent = "✅ El tatuaje de 5 cm ya fue utilizado.";
+      } else {
+        status.textContent = "Disponible: tatuaje de 5 cm gratis.";
+        btn5.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (card.stamps >= 10) {
+      if (finalUsed) {
+        status.textContent = "✅ La recompensa final ya fue utilizada.";
+      } else if (reward5Used) {
+        status.textContent =
+          "El premio de 5 cm ya fue utilizado; no aplica el premio acumulado de 10 sellos.";
+      } else {
+        status.textContent =
+          "El cliente conservó su premio de 5 sellos. Elige UNA recompensa final:";
+        btn15.classList.remove("hidden");
+        btn30.classList.remove("hidden");
+      }
+    }
+  }
+
   async function loadScannedCard(cardId) {
     if (!currentProfile || currentProfile.role !== "admin") {
       return alert("Solo el administrador puede consultar tarjetas escaneadas.");
@@ -1058,7 +1278,9 @@
       card.stamps + " / 10 sellos";
     document.getElementById("admin-operation-msg").textContent = rewardFor(card.stamps);
     renderStamps("admin-stamps", card.stamps);
+    lastAdminStamps = card.stamps;
     document.getElementById("admin-client-card").classList.remove("hidden");
+    await updateAdminControls(card);
 
     await stopQRScanner();
     window.switchView("view-admin");
@@ -1132,9 +1354,19 @@
     if (!currentAdminCardId) return alert("Primero escanea una tarjeta.");
 
     const msg = document.getElementById("admin-operation-msg");
+    const addBtn = document.getElementById("add-stamp-btn");
+    const removeBtn = document.getElementById("remove-stamp-btn");
+
+    if (action === "add" && addBtn.disabled) return;
+    if (action === "remove" && removeBtn.disabled) return;
+
     msg.textContent = action === "add" ? "Agregando sello..." : "Quitando sello...";
+    addBtn.disabled = true;
+    removeBtn.disabled = true;
 
     try {
+      const previousStamps = lastAdminStamps;
+
       const { data, error } = await sb.rpc("change_stamp", {
         p_card_id: currentAdminCardId,
         p_action: action
@@ -1143,7 +1375,8 @@
       if (error) {
         console.error("Error change_stamp:", error);
         msg.textContent = error.message;
-        return alert(error.message);
+        alert(error.message);
+        return;
       }
 
       document.getElementById("admin-client-name").textContent = data.client_name;
@@ -1152,11 +1385,111 @@
         "Tarjeta #" + data.card_number;
       document.getElementById("admin-stamp-count").textContent =
         data.stamps + " / 10 sellos";
-      renderStamps("admin-stamps", data.stamps);
+
+      const animateIndex =
+        action === "add" && data.stamps > (previousStamps ?? -1)
+          ? data.stamps
+          : null;
+
+      renderStamps("admin-stamps", data.stamps, animateIndex);
+      lastAdminStamps = data.stamps;
+
       msg.textContent = "✅ Cambio guardado. " + rewardFor(data.stamps);
+
+      await updateAdminControls({
+        id: currentAdminCardId,
+        stamps: data.stamps,
+        status: "active"
+      });
+
     } catch (error) {
       console.error(error);
       msg.textContent = "No se pudo modificar la tarjeta.";
+    } finally {
+      if (lastAdminStamps !== null) {
+        addBtn.disabled = lastAdminStamps >= 10;
+        removeBtn.disabled = lastAdminStamps <= 0;
+      }
+    }
+  };
+
+  window.redeemReward = async function(rewardType) {
+    if (!currentAdminCardId) return alert("Primero escanea una tarjeta.");
+
+    const labels = {
+      tattoo_5cm: "tatuaje de 5 cm",
+      tattoo_15cm: "tatuaje de 15 cm GRATIS",
+      discount_30: "30% de descuento"
+    };
+
+    const label = labels[rewardType];
+    if (!label) return;
+
+    if (!confirm("¿Confirmas el canje de " + label + "? Esta acción quedará registrada.")) {
+      return;
+    }
+
+    const msg = document.getElementById("admin-operation-msg");
+    msg.textContent = "Procesando canje...";
+
+    try {
+      const { data, error } = await sb.rpc("redeem_reward", {
+        p_card_id: currentAdminCardId,
+        p_reward: rewardType
+      });
+
+      if (error) {
+        console.error("Error redeem_reward:", error);
+        msg.textContent = error.message;
+        alert(error.message);
+        return;
+      }
+
+      msg.textContent = "✅ " + (data.message || "Recompensa canjeada.");
+
+      // El premio de 5 cm no cierra la tarjeta.
+      if (rewardType === "tattoo_5cm") {
+        await updateAdminControls({
+          id: currentAdminCardId,
+          stamps: lastAdminStamps,
+          status: "active"
+        });
+        return;
+      }
+
+      // El canje final cierra la tarjeta actual y Supabase crea la siguiente.
+      const newCardId = data.new_card_id;
+      if (!newCardId) {
+        throw new Error("Supabase realizó el canje, pero no devolvió la nueva tarjeta.");
+      }
+
+      currentAdminCardId = newCardId;
+      lastAdminStamps = 0;
+
+      document.getElementById("admin-client-name").textContent =
+        data.client_name || "Cliente";
+      document.getElementById("admin-client-level").textContent = levelFor(0);
+      document.getElementById("admin-card-number").textContent =
+        "Tarjeta #" + data.new_card_number;
+      document.getElementById("admin-stamp-count").textContent = "0 / 10 sellos";
+      renderStamps("admin-stamps", 0);
+
+      await updateAdminControls({
+        id: newCardId,
+        stamps: 0,
+        status: "active"
+      });
+
+      alert(
+        "🎉 Recompensa canjeada correctamente. " +
+        "Tarjeta #" + data.completed_card + " cerrada y Tarjeta #" +
+        data.new_card_number + " creada con 0/10 sellos."
+      );
+
+    } catch (error) {
+      console.error(error);
+      msg.textContent = error.message || "No se pudo canjear la recompensa.";
+      alert(msg.textContent);
     }
   };
 
