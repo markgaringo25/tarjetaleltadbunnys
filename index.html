@@ -16,6 +16,8 @@
 
   <!-- Supabase JS: debe cargarse ANTES de crear el cliente -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Generador QR -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
   <style>
 
@@ -364,6 +366,82 @@
 
     }
 
+
+    /* TARJETA DE LEALTAD / ADMIN */
+    .loyalty-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 18px;
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    .loyalty-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      background: rgba(211,17,27,.18);
+      border: 1px solid var(--primary-red);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .stamp-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .stamp {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 2px solid #555;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      background: #0b0b0b;
+    }
+
+    .stamp.filled {
+      border-color: var(--primary-red);
+      background: var(--primary-red);
+    }
+
+    .qr-box {
+      background: white;
+      padding: 12px;
+      border-radius: 12px;
+      width: fit-content;
+      margin: 15px auto;
+    }
+
+    .admin-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .small-muted {
+      color: #aaa;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
   </style>
 </head>
 
@@ -683,73 +761,85 @@
 
 
   <!-- ========================= -->
-  <!-- CONFIRMACIÓN -->
+  <!-- PANEL DEL CLIENTE -->
   <!-- ========================= -->
 
-  <div
-    id="view-success"
-    class="view"
-    style="
-      text-align:center;
-      justify-content:center;
-      align-items:center;
-    "
-  >
+  <div id="view-client" class="view">
+    <button type="button" class="btn-back" onclick="logout()">← Cerrar sesión</button>
 
-    <span style="font-size:60px;">
-      ✅
-    </span>
+    <h2>Mi tarjeta Bunny's INK</h2>
+    <p id="client-welcome" class="small-muted" style="margin-top:6px;"></p>
 
+    <div class="loyalty-panel">
+      <div class="loyalty-header">
+        <strong id="client-card-number">Tarjeta #1</strong>
+        <span id="client-level" class="badge">🖤 Cliente nuevo</span>
+      </div>
 
-    <h2 style="margin-top:15px;">
-      ¡Bienvenido!
-    </h2>
+      <div id="client-stamps" class="stamp-grid"></div>
 
+      <p id="client-stamp-count" style="text-align:center;font-weight:700;"></p>
+      <p id="client-reward-text" class="small-muted" style="text-align:center;margin-top:8px;"></p>
 
-    <p
-      id="welcome-msg"
-      style="
-        color:#aaa;
-        margin:10px 0 25px;
-        font-size:14px;
-      "
-    ></p>
-
-
-    <button
-      type="button"
-      class="btn btn-primary"
-      onclick="switchView('view-home')"
-    >
-      Ir al Inicio
-    </button>
-
-
-    <button
-      type="button"
-      class="btn btn-secondary"
-      style="margin-top:12px;"
-      onclick="switchView('view-qr')"
-    >
-      Abrir escáner QR
-    </button>
-
+      <div id="client-qr" class="qr-box"></div>
+      <p class="small-muted" style="text-align:center;">
+        Muestra este QR al administrador para registrar tu visita.
+      </p>
+    </div>
   </div>
 
+
+  <!-- ========================= -->
+  <!-- PANEL DEL ADMINISTRADOR -->
+  <!-- ========================= -->
+
+  <div id="view-admin" class="view">
+    <button type="button" class="btn-back" onclick="logout()">← Cerrar sesión</button>
+
+    <h2>Panel administrador</h2>
+    <p class="small-muted" style="margin-top:6px;margin-bottom:18px;">
+      Escanea el QR de un cliente para consultar su tarjeta.
+    </p>
+
+    <button type="button" class="btn btn-primary" onclick="switchView('view-qr')">
+      Escanear QR de cliente
+    </button>
+
+    <div id="admin-client-card" class="loyalty-panel hidden">
+      <div class="loyalty-header">
+        <strong id="admin-client-name">Cliente</strong>
+        <span id="admin-client-level" class="badge"></span>
+      </div>
+
+      <p id="admin-card-number" class="small-muted"></p>
+      <div id="admin-stamps" class="stamp-grid"></div>
+      <p id="admin-stamp-count" style="text-align:center;font-weight:700;"></p>
+
+      <div class="admin-actions">
+        <button type="button" class="btn btn-secondary" onclick="changeStamp('remove')">
+          ➖ Quitar
+        </button>
+        <button type="button" class="btn btn-primary" onclick="changeStamp('add')">
+          ➕ Agregar
+        </button>
+      </div>
+
+      <p id="admin-operation-msg" class="small-muted" style="text-align:center;margin-top:12px;"></p>
+    </div>
+  </div>
 
 </div>
 
 
 <script>
-  /* ========================================
-     CONFIGURACIÓN
-  ======================================== */
-
   const SUPABASE_URL = "https://zggngzzaxnujwbrhnabb.supabase.co";
   const SUPABASE_KEY = "sb_publishable_cQo_VuJAObijc1MTmuV_uw_6heHIoa3";
 
   let sb = null;
   let html5QrCode = null;
+  let currentProfile = null;
+  let currentAdminCardId = null;
+  let qrBusy = false;
 
   if (window.supabase && typeof window.supabase.createClient === "function") {
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -758,291 +848,338 @@
     console.error("❌ No se pudo cargar la librería de Supabase");
   }
 
-
-  /* ========================================
-     NAVEGACIÓN
-  ======================================== */
-
   window.switchView = function(viewId) {
-    document.querySelectorAll(".view").forEach(function(view) {
-      view.classList.remove("active");
-    });
-
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     const target = document.getElementById(viewId);
-
-    if (!target) {
-      console.error("No existe la pantalla:", viewId);
-      return;
-    }
-
+    if (!target) return console.error("No existe la pantalla:", viewId);
     target.classList.add("active");
-    console.log("Abriendo pantalla:", viewId);
 
     if (viewId === "view-qr") {
+      qrBusy = false;
       setTimeout(startQRScanner, 300);
     } else {
       stopQRScanner();
     }
   };
 
+  function levelFor(stamps) {
+    if (stamps >= 10) return "🎁 Recompensa desbloqueada";
+    if (stamps >= 6) return "💀 Casi desbloqueado";
+    if (stamps >= 3) return "🔥 Cliente frecuente";
+    return "🖤 Cliente nuevo";
+  }
 
-  /* ========================================
-     REGISTRO REAL EN SUPABASE AUTH
-  ======================================== */
+  function rewardFor(stamps) {
+    if (stamps >= 10) return "🎁 Recompensa de 10 sellos disponible.";
+    if (stamps >= 5) return "🎁 Tatuaje de 5 cm gratis desbloqueado.";
+    return "Te faltan " + (5 - stamps) + " sello(s) para tu primera recompensa.";
+  }
+
+  function renderStamps(containerId, stamps) {
+    const box = document.getElementById(containerId);
+    box.innerHTML = "";
+    for (let i = 1; i <= 10; i++) {
+      const item = document.createElement("div");
+      item.className = "stamp" + (i <= stamps ? " filled" : "");
+      item.textContent = i <= stamps ? "✓" : i;
+      box.appendChild(item);
+    }
+  }
+
+  async function getProfile(userId) {
+    const { data, error } = await sb
+      .from("profiles")
+      .select("id, full_name, phone, role, blocked")
+      .eq("id", userId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async function getActiveCard(userId) {
+    const { data, error } = await sb
+      .from("loyalty_cards")
+      .select("id, user_id, card_number, stamps, status")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("card_number", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async function openDashboard(user) {
+    try {
+      currentProfile = await getProfile(user.id);
+
+      if (currentProfile.blocked) {
+        await sb.auth.signOut();
+        alert("Esta cuenta está bloqueada.");
+        return window.switchView("view-home");
+      }
+
+      if (currentProfile.role === "admin") {
+        document.getElementById("admin-client-card").classList.add("hidden");
+        currentAdminCardId = null;
+        return window.switchView("view-admin");
+      }
+
+      const card = await getActiveCard(user.id);
+      document.getElementById("client-welcome").textContent =
+        "Hola, " + currentProfile.full_name + ".";
+      document.getElementById("client-card-number").textContent =
+        "Tarjeta #" + card.card_number;
+      document.getElementById("client-level").textContent = levelFor(card.stamps);
+      document.getElementById("client-stamp-count").textContent =
+        card.stamps + " / 10 sellos";
+      document.getElementById("client-reward-text").textContent =
+        rewardFor(card.stamps);
+      renderStamps("client-stamps", card.stamps);
+
+      const qrBox = document.getElementById("client-qr");
+      qrBox.innerHTML = "";
+      if (typeof QRCode !== "undefined") {
+        new QRCode(qrBox, {
+          text: "BUNNYS_CARD:" + card.id,
+          width: 180,
+          height: 180
+        });
+      } else {
+        qrBox.textContent = "No se pudo generar el QR.";
+      }
+
+      window.switchView("view-client");
+    } catch (error) {
+      console.error("Error cargando panel:", error);
+      alert("No se pudo cargar la tarjeta del usuario.");
+    }
+  }
 
   window.handleRegister = async function(event) {
     event.preventDefault();
-
-    if (!sb) {
-      alert("Supabase no está conectado. Abre la consola del navegador para revisar el error.");
-      return;
-    }
+    if (!sb) return alert("Supabase no está conectado.");
 
     const name = document.getElementById("register-name").value.trim();
     const email = document.getElementById("register-email").value.trim();
     const phone = document.getElementById("register-phone").value.trim();
     const password = document.getElementById("register-password").value;
 
-    if (!name || !email || !phone || !password) {
-      alert("Completa todos los campos.");
-      return;
-    }
+    if (!name || !email || !phone || !password) return alert("Completa todos los campos.");
+    if (password.length < 6) return alert("La contraseña debe tener mínimo 6 caracteres.");
 
-    if (password.length < 6) {
-      alert("La contraseña debe tener mínimo 6 caracteres.");
-      return;
-    }
-
-    const submitButton = event.submitter;
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = "Creando cuenta...";
-    }
+    const btn = event.submitter;
+    if (btn) { btn.disabled = true; btn.textContent = "Creando cuenta..."; }
 
     try {
       const { data, error } = await sb.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name,
-            phone: phone
-          }
-        }
+        email, password,
+        options: { data: { full_name: name, phone } }
       });
 
-      if (error) {
-        console.error("Error de registro en Supabase:", error);
-        alert("No se pudo crear la cuenta: " + error.message);
-        return;
-      }
-
-      if (!data.user) {
-        console.error("Supabase no devolvió un usuario:", data);
-        alert("Supabase no devolvió el usuario. Revisa Authentication → Users.");
-        return;
-      }
-
-      console.log("✅ Usuario registrado en Supabase:", data.user);
-
-      document.getElementById("welcome-msg").textContent =
-        "Bienvenido a Bunny's INK, " + name + ". Tu cuenta fue creada correctamente.";
-
+      if (error) return alert("No se pudo crear la cuenta: " + error.message);
       event.target.reset();
-      window.switchView("view-success");
 
-    } catch (error) {
-      console.error("Error inesperado registrando usuario:", error);
-      alert("Ocurrió un error al conectar con Supabase.");
-    } finally {
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = "Crear Cuenta";
+      if (data.session && data.user) {
+        await openDashboard(data.user);
+      } else {
+        alert("Cuenta creada. Si la confirmación de correo está activada, confirma tu correo y después inicia sesión.");
+        window.switchView("view-login");
       }
+    } catch (error) {
+      console.error(error);
+      alert("Ocurrió un error al registrar la cuenta.");
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Crear Cuenta"; }
     }
   };
-
-
-  /* ========================================
-     INICIO DE SESIÓN REAL EN SUPABASE AUTH
-  ======================================== */
 
   window.handleLogin = async function(event) {
     event.preventDefault();
-
-    if (!sb) {
-      alert("Supabase no está conectado. Abre la consola del navegador para revisar el error.");
-      return;
-    }
+    if (!sb) return alert("Supabase no está conectado.");
 
     const email = document.getElementById("login-email").value.trim();
     const password = document.getElementById("login-password").value;
+    const btn = event.submitter;
 
-    if (!email || !password) {
-      alert("Escribe tu correo y contraseña.");
-      return;
-    }
-
-    const submitButton = event.submitter;
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = "Ingresando...";
-    }
+    if (btn) { btn.disabled = true; btn.textContent = "Ingresando..."; }
 
     try {
-      const { data, error } = await sb.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        console.error("Error de inicio de sesión:", error);
-        alert("No se pudo iniciar sesión: " + error.message);
-        return;
-      }
-
-      const nombre =
-        data.user?.user_metadata?.full_name ||
-        data.user?.email ||
-        "cliente";
-
-      console.log("✅ Sesión iniciada:", data.user);
-
-      document.getElementById("welcome-msg").textContent =
-        "Bienvenido a Bunny's INK, " + nombre + ".";
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) return alert("No se pudo iniciar sesión: " + error.message);
 
       event.target.reset();
-      window.switchView("view-success");
-
+      await openDashboard(data.user);
     } catch (error) {
-      console.error("Error inesperado iniciando sesión:", error);
-      alert("Ocurrió un error al conectar con Supabase.");
+      console.error(error);
+      alert("Ocurrió un error al iniciar sesión.");
     } finally {
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = "Ingresar";
-      }
+      if (btn) { btn.disabled = false; btn.textContent = "Ingresar"; }
     }
   };
 
-
-  /* ========================================
-     CERRAR SESIÓN
-  ======================================== */
-
   window.logout = async function() {
-    if (!sb) return;
-
-    const { error } = await sb.auth.signOut();
-
-    if (error) {
-      console.error("Error cerrando sesión:", error);
-      alert("No se pudo cerrar la sesión.");
-      return;
-    }
-
+    if (sb) await sb.auth.signOut();
+    currentProfile = null;
+    currentAdminCardId = null;
+    await stopQRScanner();
     window.switchView("view-home");
   };
 
+  async function loadScannedCard(cardId) {
+    if (!currentProfile || currentProfile.role !== "admin") {
+      return alert("Solo el administrador puede consultar tarjetas escaneadas.");
+    }
 
-  /* ========================================
-     ESCÁNER QR
-  ======================================== */
+    const { data: card, error: cardError } = await sb
+      .from("loyalty_cards")
+      .select("id, user_id, card_number, stamps, status")
+      .eq("id", cardId)
+      .single();
+
+    if (cardError || !card) throw cardError || new Error("Tarjeta no encontrada");
+
+    const { data: profile, error: profileError } = await sb
+      .from("profiles")
+      .select("full_name, blocked")
+      .eq("id", card.user_id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    currentAdminCardId = card.id;
+    document.getElementById("admin-client-name").textContent = profile.full_name;
+    document.getElementById("admin-client-level").textContent = levelFor(card.stamps);
+    document.getElementById("admin-card-number").textContent =
+      "Tarjeta #" + card.card_number + (profile.blocked ? " · CLIENTE BLOQUEADO" : "");
+    document.getElementById("admin-stamp-count").textContent =
+      card.stamps + " / 10 sellos";
+    document.getElementById("admin-operation-msg").textContent = rewardFor(card.stamps);
+    renderStamps("admin-stamps", card.stamps);
+    document.getElementById("admin-client-card").classList.remove("hidden");
+
+    await stopQRScanner();
+    window.switchView("view-admin");
+  }
 
   async function startQRScanner() {
     const result = document.getElementById("qr-result");
     const qrText = document.getElementById("qr-text");
-
     result.style.display = "none";
+
+    if (!currentProfile || currentProfile.role !== "admin") {
+      result.style.display = "block";
+      qrText.textContent = "Solo el administrador puede usar este escáner.";
+      return;
+    }
 
     if (typeof Html5Qrcode === "undefined") {
       result.style.display = "block";
-      qrText.textContent =
-        "No se pudo cargar el lector QR. Comprueba tu conexión a Internet.";
+      qrText.textContent = "No se pudo cargar el lector QR.";
       return;
     }
 
     try {
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
-
+      if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
       if (html5QrCode.isScanning) return;
 
       await html5QrCode.start(
         { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 220, height: 220 }
-        },
-        function(decodedText) {
-          result.style.display = "block";
-          qrText.textContent = decodedText;
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        async function(decodedText) {
+          if (qrBusy) return;
+          qrBusy = true;
+
+          try {
+            qrText.textContent = decodedText;
+            result.style.display = "block";
+
+            if (!decodedText.startsWith("BUNNYS_CARD:")) {
+              throw new Error("Este QR no pertenece a Bunny's INK.");
+            }
+
+            const cardId = decodedText.replace("BUNNYS_CARD:", "").trim();
+            await loadScannedCard(cardId);
+          } catch (error) {
+            console.error(error);
+            qrText.textContent = error.message || "No se pudo leer la tarjeta.";
+            qrBusy = false;
+          }
         },
         function() {}
       );
-
     } catch (error) {
       console.error("Error de cámara:", error);
       result.style.display = "block";
-      qrText.textContent =
-        "No se pudo abrir la cámara. Verifica que hayas dado permiso para usarla.";
+      qrText.textContent = "No se pudo abrir la cámara. Verifica el permiso.";
     }
   }
 
   async function stopQRScanner() {
     if (html5QrCode && html5QrCode.isScanning) {
-      try {
-        await html5QrCode.stop();
-      } catch (error) {
-        console.log("El lector QR ya estaba detenido.");
-      }
+      try { await html5QrCode.stop(); } catch (_) {}
     }
   }
 
   window.stopQRAndBack = async function() {
     await stopQRScanner();
-    window.switchView("view-home");
+    window.switchView(currentProfile?.role === "admin" ? "view-admin" : "view-client");
   };
 
+  window.changeStamp = async function(action) {
+    if (!currentAdminCardId) return alert("Primero escanea una tarjeta.");
 
-  /* ========================================
-     RELOJ Y COMPROBACIÓN DE SESIÓN
-  ======================================== */
+    const msg = document.getElementById("admin-operation-msg");
+    msg.textContent = action === "add" ? "Agregando sello..." : "Quitando sello...";
+
+    try {
+      const { data, error } = await sb.rpc("change_stamp", {
+        p_card_id: currentAdminCardId,
+        p_action: action
+      });
+
+      if (error) {
+        console.error("Error change_stamp:", error);
+        msg.textContent = error.message;
+        return alert(error.message);
+      }
+
+      document.getElementById("admin-client-name").textContent = data.client_name;
+      document.getElementById("admin-client-level").textContent = levelFor(data.stamps);
+      document.getElementById("admin-card-number").textContent =
+        "Tarjeta #" + data.card_number;
+      document.getElementById("admin-stamp-count").textContent =
+        data.stamps + " / 10 sellos";
+      renderStamps("admin-stamps", data.stamps);
+      msg.textContent = "✅ Cambio guardado. " + rewardFor(data.stamps);
+    } catch (error) {
+      console.error(error);
+      msg.textContent = "No se pudo modificar la tarjeta.";
+    }
+  };
 
   function updateClock() {
     const clock = document.getElementById("current-time");
     if (!clock) return;
-
     clock.textContent = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false
+      hour: "2-digit", minute: "2-digit", hour12: false
     });
   }
 
-  async function comprobarSesion() {
+  async function restoreSession() {
     if (!sb) return;
-
     const { data, error } = await sb.auth.getSession();
-
-    if (error) {
-      console.error("Error comprobando sesión:", error);
-      return;
-    }
-
-    if (data.session) {
-      console.log("✅ Sesión activa:", data.session.user);
-    } else {
-      console.log("Sin sesión activa.");
-    }
+    if (error) return console.error(error);
+    if (data.session?.user) await openDashboard(data.session.user);
   }
 
   document.addEventListener("DOMContentLoaded", function() {
     console.log("✅ Bunny's INK cargado correctamente");
     updateClock();
     setInterval(updateClock, 30000);
-    comprobarSesion();
+    restoreSession();
   });
 </script>
 
