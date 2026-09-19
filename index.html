@@ -89,10 +89,18 @@
       display: flex;
     }
 
-    #view-home {
-      justify-content: space-between;
-      align-items: center;
-      text-align: center;
+  <!-- INICIO -->
+    <div id="view-home" class="view active">
+      <div class="portada-container">
+        <img src="portada.jpg" alt="Bunny's INK Portada" class="portada-img">
+      </div>
+
+      <div class="action-container">
+        <button class="btn btn-primary" onclick="switchView('view-login')">Iniciar sesión</button>
+        <button class="btn btn-secondary" onclick="switchView('view-register')">Registrarse</button>
+      </div>
+    </div>
+
     }
 
     .logo-badge {
@@ -222,6 +230,8 @@
       text-align: left;
       word-break: break-all;
     }
+
+word-break: break-all;
   </style>
 </head>
 <body>
