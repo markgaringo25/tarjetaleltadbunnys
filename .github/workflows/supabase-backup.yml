@@ -16,31 +16,34 @@ jobs:
         with:
           version: latest
 
-      - name: Vincular proyecto Supabase
-        run: supabase link --project-ref zggngzzaxnujwbrhnabb
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
       - name: Crear carpeta de respaldo
         run: mkdir -p supabase-backup
 
       - name: Respaldar roles
-        run: supabase db dump --linked -f supabase-backup/roles.sql --role-only
+        run: >
+          supabase db dump
+          --db-url "postgresql://postgres.zggngzzaxnujwbrhnabb:${SUPABASE_DB_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
+          -f supabase-backup/roles.sql
+          --role-only
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
       - name: Respaldar estructura
-        run: supabase db dump --linked -f supabase-backup/schema.sql
+        run: >
+          supabase db dump
+          --db-url "postgresql://postgres.zggngzzaxnujwbrhnabb:${SUPABASE_DB_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
+          -f supabase-backup/schema.sql
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
       - name: Respaldar datos
-        run: supabase db dump --linked -f supabase-backup/data.sql --data-only --use-copy
+        run: >
+          supabase db dump
+          --db-url "postgresql://postgres.zggngzzaxnujwbrhnabb:${SUPABASE_DB_PASSWORD}@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
+          -f supabase-backup/data.sql
+          --data-only
+          --use-copy
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
       - name: Guardar respaldo como archivo privado
