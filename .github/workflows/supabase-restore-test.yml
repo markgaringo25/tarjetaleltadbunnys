@@ -41,3 +41,15 @@ jobs:
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/schema.sql
+
+      - name: Restaurar datos en PROYECTO VIEJO
+        env:
+          PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
+        run: |
+          psql \
+            --host=aws-0-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --dbname=postgres \
+            --set=ON_ERROR_STOP=1 \
+            --file=supabase-backup/data.sql
