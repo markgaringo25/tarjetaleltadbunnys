@@ -37,12 +37,12 @@ jobs:
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --username=postgres.bbgjyvrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/schema.sql
 
-      - name: Preparar datos PUBLIC sin duplicar AUTH
+      - name: Preparar solamente datos PUBLIC
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -51,33 +51,50 @@ jobs:
           dst = Path("supabase-backup/data-public.sql")
 
           lines = src.read_text(encoding="utf-8").splitlines(True)
+
           output = []
           skipping = False
 
           for line in lines:
-              if line.startswith("COPY auth.") or line.startswith("COPY users "):
-                  skipping = True
-                  continue
+              stripped = line.strip()
+
+              if stripped.startswith("COPY "):
+                  if not stripped.startswith("COPY public."):
+                      skipping = True
+                      continue
 
               if skipping:
-                  if line.rstrip("\r\n") == r"\.":
+                  if stripped == r"\.":
                       skipping = False
                   continue
 
               output.append(line)
 
           dst.write_text("".join(output), encoding="utf-8")
+
           print("data-public.sql creado correctamente")
           PY
 
-      - name: Restaurar datos PUBLIC sin duplicar AUTH
+      - name: Restaurar datos PUBLIC
         env:
           PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
         run: |
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --username=postgres.bbgjyvrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/data-public.sql
+
+      - name: Verificar restauracion
+        env:
+          PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
+        run: |
+          psql \
+            --host=aws-0-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.bbgjyvrnuyagusmjfcrv \
+            --dbname=postgres \
+            --set=ON_ERROR_STOP=1 \
+            --command="SELECT schemaname, tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;"
