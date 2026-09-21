@@ -54,7 +54,7 @@ jobs:
       # RESTAURAR ESTRUCTURA
       # ============================================================
 
-      - name: Restaurar estructura en PROYECTO VIEJO
+      - name: Restaurar estructura en PROYECTO DE PRUEBA
         env:
           PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
         run: |
@@ -149,17 +149,44 @@ jobs:
           identities_dst.write_text("".join(identities), encoding="utf-8")
           public_dst.write_text("".join(public), encoding="utf-8")
 
-          print("Archivos preparados:")
+          print("Archivos preparados correctamente:")
           print(users_dst)
           print(identities_dst)
           print(public_dst)
           PY
 
           echo ""
-          echo "Tamaños:"
+          echo "Tamaños de archivos:"
           ls -lh supabase-backup/data-auth-users.sql
           ls -lh supabase-backup/data-auth-identities.sql
           ls -lh supabase-backup/data-public.sql
+
+      # ============================================================
+      # LIMPIAR DATOS DE INTENTOS ANTERIORES
+      # SOLO PROYECTO DE PRUEBA
+      # ============================================================
+
+      - name: Limpiar datos anteriores del proyecto de prueba
+        env:
+          PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
+        run: |
+          psql \
+            --host=aws-0-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --dbname=postgres \
+            --set=ON_ERROR_STOP=1 \
+            --command="TRUNCATE TABLE public.customer_rewards, public.stamp_history, public.push_subscriptions, public.push_campaigns, public.loyalty_cards, public.reward_settings, public.profiles RESTART IDENTITY CASCADE;"
+
+          psql \
+            --host=aws-0-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --dbname=postgres \
+            --set=ON_ERROR_STOP=1 \
+            --command="DELETE FROM auth.identities; DELETE FROM auth.users;"
+
+          echo "Datos anteriores eliminados."
 
       # ============================================================
       # RESTAURAR AUTH.USERS
@@ -194,10 +221,10 @@ jobs:
             --file=supabase-backup/data-auth-identities.sql
 
       # ============================================================
-      # ELIMINAR DATOS CREADOS AUTOMATICAMENTE POR TRIGGER
+      # LIMPIAR DATOS GENERADOS POR EL TRIGGER DE AUTH
       # ============================================================
 
-      - name: Eliminar datos creados automáticamente por trigger
+      - name: Eliminar datos creados automáticamente por AUTH
         env:
           PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
         run: |
@@ -209,10 +236,31 @@ jobs:
             --set=ON_ERROR_STOP=1 \
             --command="TRUNCATE TABLE public.customer_rewards, public.stamp_history, public.push_subscriptions, public.push_campaigns, public.loyalty_cards, public.reward_settings, public.profiles RESTART IDENTITY CASCADE;"
 
-          echo "Datos PUBLIC generados automáticamente eliminados."
+          echo "Datos automáticos eliminados."
 
       # ============================================================
-      # RESTAURAR DATOS PUBLIC
+      # DESACTIVAR TEMPORALMENTE TRIGGERS DE PROFILES
+      #
+      # Esto evita que al restaurar profiles se cree nuevamente
+      # loyalty_cards y provoque el error de tarjeta duplicada.
+      # ============================================================
+
+      - name: Desactivar trigger automático de profiles
+        env:
+          PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
+        run: |
+          psql \
+            --host=aws-0-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --dbname=postgres \
+            --set=ON_ERROR_STOP=1 \
+            --command="ALTER TABLE public.profiles DISABLE TRIGGER USER;"
+
+          echo "Triggers de profiles desactivados temporalmente."
+
+      # ============================================================
+      # RESTAURAR DATOS PUBLIC ORIGINALES
       # ============================================================
 
       - name: Restaurar datos PUBLIC
@@ -226,6 +274,28 @@ jobs:
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/data-public.sql
+
+      # ============================================================
+      # REACTIVAR TRIGGERS
+      #
+      # always() hace que este paso se ejecute incluso si el paso
+      # anterior presenta algún error.
+      # ============================================================
+
+      - name: Reactivar trigger automático de profiles
+        if: always()
+        env:
+          PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
+        run: |
+          psql \
+            --host=aws-0-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --dbname=postgres \
+            --set=ON_ERROR_STOP=1 \
+            --command="ALTER TABLE public.profiles ENABLE TRIGGER USER;"
+
+          echo "Triggers de profiles activados nuevamente."
 
       # ============================================================
       # VERIFICACION FINAL
@@ -245,5 +315,5 @@ jobs:
 
           echo ""
           echo "=========================================="
-          echo "RESTAURACION FINALIZADA"
+          echo "RESTAURACION FINALIZADA CORRECTAMENTE"
           echo "=========================================="
