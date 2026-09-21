@@ -16,6 +16,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
+      # ============================================================
+      # DESCARGAR EL RESPALDO
+      # ============================================================
+
       - name: Descargar respaldo
         uses: dawidd6/action-download-artifact@v6
         with:
@@ -23,19 +27,31 @@ jobs:
           workflow_conclusion: success
           name: Bunnys-INK-Supabase-Backup-v1.2
           path: supabase-backup
+          search_artifacts: true
+
+      # ============================================================
+      # VERIFICAR ARCHIVOS
+      # ============================================================
 
       - name: Verificar archivos
         run: |
-          echo "Archivos encontrados:"
+          echo "=========================================="
+          echo "ARCHIVOS ENCONTRADOS"
+          echo "=========================================="
+
           find supabase-backup -maxdepth 2 -type f -print
+
+          echo ""
+          echo "Verificando archivos obligatorios..."
 
           test -f supabase-backup/schema.sql
           test -f supabase-backup/data.sql
 
-          echo "Respaldo encontrado correctamente."
+          echo "schema.sql encontrado"
+          echo "data.sql encontrado"
 
       # ============================================================
-      # 1. RESTAURAR ESTRUCTURA PUBLIC
+      # RESTAURAR ESTRUCTURA
       # ============================================================
 
       - name: Restaurar estructura en PROYECTO VIEJO
@@ -51,7 +67,14 @@ jobs:
             --file=supabase-backup/schema.sql
 
       # ============================================================
-      # 2. SEPARAR AUTH.USERS, AUTH.IDENTITIES Y PUBLIC
+      # PREPARAR DATA.SQL
+      #
+      # Creamos:
+      #   data-auth-users.sql
+      #   data-auth-identities.sql
+      #   data-public.sql
+      #
+      # No modificamos el respaldo original.
       # ============================================================
 
       - name: Preparar datos AUTH y PUBLIC
@@ -61,88 +84,92 @@ jobs:
 
           src = Path("supabase-backup/data.sql")
 
-          if not src.exists():
-              raise SystemExit("ERROR: No existe supabase-backup/data.sql")
+          users_dst = Path("supabase-backup/data-auth-users.sql")
+          identities_dst = Path("supabase-backup/data-auth-identities.sql")
+          public_dst = Path("supabase-backup/data-public.sql")
 
           lines = src.read_text(encoding="utf-8").splitlines(True)
 
-          auth_users = []
-          auth_identities = []
-          public_data = []
+          users = []
+          identities = []
+          public = []
 
-          current = None
+          mode = None
 
           for line in lines:
               stripped = line.lstrip()
 
               if stripped.startswith('COPY "auth"."users" '):
-                  current = "auth_users"
-                  auth_users.append(line)
+                  mode = "users"
+                  users.append(line)
                   continue
 
               if stripped.startswith('COPY "auth"."identities" '):
-                  current = "auth_identities"
-                  auth_identities.append(line)
+                  mode = "identities"
+                  identities.append(line)
                   continue
 
               if stripped.startswith('COPY "public".'):
-                  current = "public"
-                  public_data.append(line)
+                  mode = "public"
+                  public.append(line)
+                  continue
+
+              if stripped.startswith('COPY "auth".'):
+                  mode = "skip_auth"
                   continue
 
               if stripped.startswith("COPY "):
-                  current = "skip"
+                  mode = "skip_other"
                   continue
 
-              if current == "auth_users":
-                  auth_users.append(line)
+              if mode == "users":
+                  users.append(line)
+
                   if line.strip() == r"\.":
-                      current = None
+                      mode = None
+
                   continue
 
-              if current == "auth_identities":
-                  auth_identities.append(line)
+              if mode == "identities":
+                  identities.append(line)
+
                   if line.strip() == r"\.":
-                      current = None
+                      mode = None
+
                   continue
 
-              if current == "public":
-                  public_data.append(line)
+              if mode == "public":
+                  public.append(line)
+
                   if line.strip() == r"\.":
-                      current = None
+                      mode = None
+
                   continue
 
-          Path("supabase-backup/auth-users.sql").write_text(
-              "".join(auth_users),
-              encoding="utf-8"
-          )
+              if mode in ("skip_auth", "skip_other"):
+                  if line.strip() == r"\.":
+                      mode = None
 
-          Path("supabase-backup/auth-identities.sql").write_text(
-              "".join(auth_identities),
-              encoding="utf-8"
-          )
+                  continue
 
-          Path("supabase-backup/data-public.sql").write_text(
-              "".join(public_data),
-              encoding="utf-8"
-          )
+          users_dst.write_text("".join(users), encoding="utf-8")
+          identities_dst.write_text("".join(identities), encoding="utf-8")
+          public_dst.write_text("".join(public), encoding="utf-8")
 
-          if not auth_users:
-              raise SystemExit("ERROR: No se encontró COPY auth.users")
-
-          if not auth_identities:
-              raise SystemExit("ERROR: No se encontró COPY auth.identities")
-
-          if not public_data:
-              raise SystemExit("ERROR: No se encontraron datos PUBLIC")
-
-          print("auth-users.sql creado correctamente")
-          print("auth-identities.sql creado correctamente")
-          print("data-public.sql creado correctamente")
+          print("Archivos preparados:")
+          print(users_dst)
+          print(identities_dst)
+          print(public_dst)
           PY
 
+          echo ""
+          echo "Tamaños:"
+          ls -lh supabase-backup/data-auth-users.sql
+          ls -lh supabase-backup/data-auth-identities.sql
+          ls -lh supabase-backup/data-public.sql
+
       # ============================================================
-      # 3. RESTAURAR AUTH.USERS
+      # RESTAURAR AUTH.USERS
       # ============================================================
 
       - name: Restaurar AUTH USERS
@@ -155,10 +182,10 @@ jobs:
             --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
-            --file=supabase-backup/auth-users.sql
+            --file=supabase-backup/data-auth-users.sql
 
       # ============================================================
-      # 4. RESTAURAR AUTH.IDENTITIES
+      # RESTAURAR AUTH.IDENTITIES
       # ============================================================
 
       - name: Restaurar AUTH IDENTITIES
@@ -171,10 +198,38 @@ jobs:
             --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
-            --file=supabase-backup/auth-identities.sql
+            --file=supabase-backup/data-auth-identities.sql
 
       # ============================================================
-      # 5. RESTAURAR DATOS PUBLIC
+      # BORRAR DATOS GENERADOS AUTOMATICAMENTE POR EL TRIGGER
+      #
+      # Al insertar auth.users, el trigger crea automáticamente
+      # profiles y loyalty_cards.
+      #
+      # Los eliminamos ANTES de restaurar PUBLIC para que entren
+      # los datos originales del respaldo.
+      # ============================================================
+
+      - name: Eliminar datos creados automáticamente por trigger
+        env:
+          PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
+        run: |
+          psql \
+            --host=aws-0-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --dbname=postgres \
+            --set=ON_ERROR_STOP=1 <<'SQL'
+
+          DELETE FROM public.loyalty_cards;
+          DELETE FROM public.profiles;
+
+          SQL
+
+          echo "Profiles y tarjetas automáticas eliminados."
+
+      # ============================================================
+      # RESTAURAR DATOS PUBLIC ORIGINALES
       # ============================================================
 
       - name: Restaurar datos PUBLIC
@@ -190,46 +245,66 @@ jobs:
             --file=supabase-backup/data-public.sql
 
       # ============================================================
-      # 6. VERIFICACIÓN
+      # VERIFICACION FINAL
       # ============================================================
 
       - name: Verificar restauracion
         env:
           PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
         run: |
-          echo "=========================================="
-          echo "USUARIOS AUTH"
-          echo "=========================================="
-
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
             --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
-            --command="SELECT count(*) AS usuarios_auth FROM auth.users;"
+            --set=ON_ERROR_STOP=1 <<'SQL'
 
-          echo "=========================================="
-          echo "PERFILES"
-          echo "=========================================="
+          SELECT 'auth.users' AS tabla, COUNT(*) AS registros
+          FROM auth.users
 
-          psql \
-            --host=aws-0-us-east-2.pooler.supabase.com \
-            --port=5432 \
-            --username=postgres.bbgjvyrnuyagusmjfcrv \
-            --dbname=postgres \
-            --command="SELECT count(*) AS perfiles FROM public.profiles;"
+          UNION ALL
 
-          echo "=========================================="
-          echo "TARJETAS"
-          echo "=========================================="
+          SELECT 'auth.identities', COUNT(*)
+          FROM auth.identities
 
-          psql \
-            --host=aws-0-us-east-2.pooler.supabase.com \
-            --port=5432 \
-            --username=postgres.bbgjvyrnuyagusmjfcrv \
-            --dbname=postgres \
-            --command="SELECT count(*) AS tarjetas FROM public.loyalty_cards;"
+          UNION ALL
 
+          SELECT 'public.profiles', COUNT(*)
+          FROM public.profiles
+
+          UNION ALL
+
+          SELECT 'public.loyalty_cards', COUNT(*)
+          FROM public.loyalty_cards
+
+          UNION ALL
+
+          SELECT 'public.customer_rewards', COUNT(*)
+          FROM public.customer_rewards
+
+          UNION ALL
+
+          SELECT 'public.stamp_history', COUNT(*)
+          FROM public.stamp_history
+
+          UNION ALL
+
+          SELECT 'public.reward_settings', COUNT(*)
+          FROM public.reward_settings
+
+          UNION ALL
+
+          SELECT 'public.push_subscriptions', COUNT(*)
+          FROM public.push_subscriptions
+
+          UNION ALL
+
+          SELECT 'public.push_campaigns', COUNT(*)
+          FROM public.push_campaigns;
+
+          SQL
+
+          echo ""
           echo "=========================================="
           echo "RESTAURACION FINALIZADA"
           echo "=========================================="
