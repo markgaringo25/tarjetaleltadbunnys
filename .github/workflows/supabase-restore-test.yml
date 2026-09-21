@@ -35,9 +35,9 @@ jobs:
           PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
         run: |
           psql \
-            --host=db.bbgjvyrnuyagusmjfcrv.supabase.co \
+            --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/schema.sql
@@ -75,9 +75,9 @@ jobs:
           PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
         run: |
           psql \
-            --host=db.bbgjvyrnuyagusmjfcrv.supabase.co \
+            --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/data-public.sql
