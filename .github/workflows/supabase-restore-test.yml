@@ -20,8 +20,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: supabase-backup.yml
-          workflow_conclusion: success
-          name: Bunnys-INK-Supabase-Backup-v1.2
+          name: bunnys-ink-supabase-backup-v1.2
           path: supabase-backup
           search_artifacts: true
 
@@ -37,7 +36,7 @@ jobs:
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres.bbgjyvrnuyagusmjfcrv \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/schema.sql
@@ -53,41 +52,32 @@ jobs:
           lines = src.read_text(encoding="utf-8").splitlines(True)
 
           output = []
-          copying_public = False
-          skipping_copy = False
+          skipping = False
 
           for line in lines:
-              stripped = line.strip()
+              stripped = line.lstrip()
 
-              if stripped.startswith("COPY "):
-                  if stripped.startswith('COPY "public".'):
-                      copying_public = True
-                      skipping_copy = False
-                      output.append(line)
-                  else:
-                      copying_public = False
-                      skipping_copy = True
-                  continue
+              if not skipping:
+                  if stripped.startswith("COPY ") and (
+                      "auth." in stripped
+                      or '"auth".' in stripped
+                      or stripped.startswith("COPY users ")
+                      or stripped.startswith('COPY "users" ')
+                  ):
+                      skipping = True
+                      continue
 
-              if skipping_copy:
-                  if stripped == r"\.":
-                      skipping_copy = False
-                  continue
-
-              if copying_public:
                   output.append(line)
 
-                  if stripped == r"\.":
-                      copying_public = False
+              else:
+                  if line.strip() == r"\.":
+                      skipping = False
 
           dst.write_text("".join(output), encoding="utf-8")
 
           print("data-public.sql creado correctamente")
-          print("Bloques PUBLIC encontrados:")
-
-          for line in output:
-              if line.strip().startswith('COPY "public".'):
-                  print(line.strip())
+          print("Lineas originales:", len(lines))
+          print("Lineas conservadas:", len(output))
           PY
 
       - name: Restaurar datos PUBLIC
@@ -97,7 +87,7 @@ jobs:
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres.bbgjyvrnuyagusmjfcrv \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/data-public.sql
@@ -106,57 +96,25 @@ jobs:
         env:
           PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
         run: |
+          echo "======================================"
+          echo "VERIFICANDO RESTAURACION"
+          echo "======================================"
+
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres.bbgjyvrnuyagusmjfcrv \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --command="
               SELECT
-                'profiles' AS tabla,
-                COUNT(*) AS registros
-              FROM public.profiles
-
-              UNION ALL
-
-              SELECT
-                'loyalty_cards',
-                COUNT(*)
-              FROM public.loyalty_cards
-
-              UNION ALL
-
-              SELECT
-                'customer_rewards',
-                COUNT(*)
-              FROM public.customer_rewards
-
-              UNION ALL
-
-              SELECT
-                'push_campaigns',
-                COUNT(*)
-              FROM public.push_campaigns
-
-              UNION ALL
-
-              SELECT
-                'push_subscriptions',
-                COUNT(*)
-              FROM public.push_subscriptions
-
-              UNION ALL
-
-              SELECT
-                'reward_settings',
-                COUNT(*)
-              FROM public.reward_settings
-
-              UNION ALL
-
-              SELECT
-                'stamp_history',
-                COUNT(*)
-              FROM public.stamp_history;
+                schemaname,
+                tablename
+              FROM pg_tables
+              WHERE schemaname = 'public'
+              ORDER BY tablename;
             "
+
+          echo "======================================"
+          echo "RESTAURACION FINALIZADA"
+          echo "======================================"
