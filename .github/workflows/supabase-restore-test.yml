@@ -21,7 +21,7 @@ jobs:
         with:
           workflow: supabase-backup.yml
           workflow_conclusion: success
-          name: bunnys-ink-supabase-backup-v1.2
+          name: Bunnys-INK-Supabase-Backup-v1.2
           path: supabase-backup
 
       - name: Verificar archivos
