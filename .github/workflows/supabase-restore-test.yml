@@ -17,7 +17,7 @@ jobs:
           sudo apt-get install -y postgresql-client
 
       # ============================================================
-      # DESCARGAR EL RESPALDO
+      # DESCARGAR RESPALDO
       # ============================================================
 
       - name: Descargar respaldo
@@ -68,13 +68,6 @@ jobs:
 
       # ============================================================
       # PREPARAR DATA.SQL
-      #
-      # Creamos:
-      #   data-auth-users.sql
-      #   data-auth-identities.sql
-      #   data-public.sql
-      #
-      # No modificamos el respaldo original.
       # ============================================================
 
       - name: Preparar datos AUTH y PUBLIC
@@ -201,41 +194,25 @@ jobs:
             --file=supabase-backup/data-auth-identities.sql
 
       # ============================================================
-      # BORRAR DATOS GENERADOS AUTOMATICAMENTE POR EL TRIGGER
-      #
-      # Al insertar auth.users, el trigger crea automáticamente
-      # profiles y loyalty_cards.
-      #
-      # Los eliminamos ANTES de restaurar PUBLIC para que entren
-      # los datos originales del respaldo.
+      # ELIMINAR DATOS CREADOS AUTOMATICAMENTE POR TRIGGER
       # ============================================================
 
       - name: Eliminar datos creados automáticamente por trigger
         env:
-          run: |
+          PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
+        run: |
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres.bbgyjvrnuyagusmjfcrv \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
-            --set=ON_ERROR_STOP=1 <<'SQL'
+            --set=ON_ERROR_STOP=1 \
+            --command="TRUNCATE TABLE public.customer_rewards, public.stamp_history, public.push_subscriptions, public.push_campaigns, public.loyalty_cards, public.reward_settings, public.profiles RESTART IDENTITY CASCADE;"
 
-          TRUNCATE TABLE
-            public.customer_rewards,
-            public.stamp_history,
-            public.push_subscriptions,
-            public.push_campaigns,
-            public.loyalty_cards,
-            public.reward_settings,
-            public.profiles
-          RESTART IDENTITY CASCADE;
-
-          SQL
-
-          echo "Profiles y tarjetas automáticas eliminados."
+          echo "Datos PUBLIC generados automáticamente eliminados."
 
       # ============================================================
-      # RESTAURAR DATOS PUBLIC ORIGINALES
+      # RESTAURAR DATOS PUBLIC
       # ============================================================
 
       - name: Restaurar datos PUBLIC
@@ -263,52 +240,8 @@ jobs:
             --port=5432 \
             --username=postgres.bbgjvyrnuyagusmjfcrv \
             --dbname=postgres \
-            --set=ON_ERROR_STOP=1 <<'SQL'
-
-          SELECT 'auth.users' AS tabla, COUNT(*) AS registros
-          FROM auth.users
-
-          UNION ALL
-
-          SELECT 'auth.identities', COUNT(*)
-          FROM auth.identities
-
-          UNION ALL
-
-          SELECT 'public.profiles', COUNT(*)
-          FROM public.profiles
-
-          UNION ALL
-
-          SELECT 'public.loyalty_cards', COUNT(*)
-          FROM public.loyalty_cards
-
-          UNION ALL
-
-          SELECT 'public.customer_rewards', COUNT(*)
-          FROM public.customer_rewards
-
-          UNION ALL
-
-          SELECT 'public.stamp_history', COUNT(*)
-          FROM public.stamp_history
-
-          UNION ALL
-
-          SELECT 'public.reward_settings', COUNT(*)
-          FROM public.reward_settings
-
-          UNION ALL
-
-          SELECT 'public.push_subscriptions', COUNT(*)
-          FROM public.push_subscriptions
-
-          UNION ALL
-
-          SELECT 'public.push_campaigns', COUNT(*)
-          FROM public.push_campaigns;
-
-          SQL
+            --set=ON_ERROR_STOP=1 \
+            --command="SELECT 'auth.users' AS tabla, COUNT(*) AS registros FROM auth.users UNION ALL SELECT 'auth.identities', COUNT(*) FROM auth.identities UNION ALL SELECT 'public.profiles', COUNT(*) FROM public.profiles UNION ALL SELECT 'public.loyalty_cards', COUNT(*) FROM public.loyalty_cards UNION ALL SELECT 'public.customer_rewards', COUNT(*) FROM public.customer_rewards UNION ALL SELECT 'public.stamp_history', COUNT(*) FROM public.stamp_history UNION ALL SELECT 'public.reward_settings', COUNT(*) FROM public.reward_settings UNION ALL SELECT 'public.push_subscriptions', COUNT(*) FROM public.push_subscriptions UNION ALL SELECT 'public.push_campaigns', COUNT(*) FROM public.push_campaigns;"
 
           echo ""
           echo "=========================================="
