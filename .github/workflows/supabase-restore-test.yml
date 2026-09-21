@@ -212,25 +212,23 @@ jobs:
 
       - name: Eliminar datos creados automáticamente por trigger
         env:
-          PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
-        run: |
+          run: |
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --username=postgres.bbgyjvrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 <<'SQL'
 
           TRUNCATE TABLE
-  public.customer_rewards,
-  public.stamp_history,
-  public.push_subscriptions,
-  public.push_campaigns,
-  public.loyalty_cards,
-  public.reward_settings,
-  public.profiles
-RESTART IDENTITY CASCADE;
-          
+            public.customer_rewards,
+            public.stamp_history,
+            public.push_subscriptions,
+            public.push_campaigns,
+            public.loyalty_cards,
+            public.reward_settings,
+            public.profiles
+          RESTART IDENTITY CASCADE;
 
           SQL
 
