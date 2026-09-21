@@ -53,26 +53,41 @@ jobs:
           lines = src.read_text(encoding="utf-8").splitlines(True)
 
           output = []
-          skipping = False
+          copying_public = False
+          skipping_copy = False
 
           for line in lines:
               stripped = line.strip()
 
               if stripped.startswith("COPY "):
-                  if not stripped.startswith("COPY public."):
-                      skipping = True
-                      continue
-
-              if skipping:
-                  if stripped == r"\.":
-                      skipping = False
+                  if stripped.startswith('COPY "public".'):
+                      copying_public = True
+                      skipping_copy = False
+                      output.append(line)
+                  else:
+                      copying_public = False
+                      skipping_copy = True
                   continue
 
-              output.append(line)
+              if skipping_copy:
+                  if stripped == r"\.":
+                      skipping_copy = False
+                  continue
+
+              if copying_public:
+                  output.append(line)
+
+                  if stripped == r"\.":
+                      copying_public = False
 
           dst.write_text("".join(output), encoding="utf-8")
 
           print("data-public.sql creado correctamente")
+          print("Bloques PUBLIC encontrados:")
+
+          for line in output:
+              if line.strip().startswith('COPY "public".'):
+                  print(line.strip())
           PY
 
       - name: Restaurar datos PUBLIC
@@ -97,4 +112,51 @@ jobs:
             --username=postgres.bbgjyvrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
-            --command="SELECT schemaname, tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;"
+            --command="
+              SELECT
+                'profiles' AS tabla,
+                COUNT(*) AS registros
+              FROM public.profiles
+
+              UNION ALL
+
+              SELECT
+                'loyalty_cards',
+                COUNT(*)
+              FROM public.loyalty_cards
+
+              UNION ALL
+
+              SELECT
+                'customer_rewards',
+                COUNT(*)
+              FROM public.customer_rewards
+
+              UNION ALL
+
+              SELECT
+                'push_campaigns',
+                COUNT(*)
+              FROM public.push_campaigns
+
+              UNION ALL
+
+              SELECT
+                'push_subscriptions',
+                COUNT(*)
+              FROM public.push_subscriptions
+
+              UNION ALL
+
+              SELECT
+                'reward_settings',
+                COUNT(*)
+              FROM public.reward_settings
+
+              UNION ALL
+
+              SELECT
+                'stamp_history',
+                COUNT(*)
+              FROM public.stamp_history;
+            "
