@@ -221,8 +221,16 @@ jobs:
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 <<'SQL'
 
-          DELETE FROM public.loyalty_cards;
-          DELETE FROM public.profiles;
+          TRUNCATE TABLE
+  public.customer_rewards,
+  public.stamp_history,
+  public.push_subscriptions,
+  public.push_campaigns,
+  public.loyalty_cards,
+  public.reward_settings,
+  public.profiles
+RESTART IDENTITY CASCADE;
+          
 
           SQL
 
