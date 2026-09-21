@@ -16,7 +16,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Descargar respaldo desde la ejecucion #2
+      - name: Descargar respaldo desde la ejecucion
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: supabase-backup.yml
@@ -37,21 +37,47 @@ jobs:
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --username=postgres.bbgyjvrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/schema.sql
 
-         - name: Restaurar datos PUBLIC sin duplicar AUTH
+      - name: Preparar datos PUBLIC sin duplicar AUTH
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          src = Path("supabase-backup/data.sql")
+          dst = Path("supabase-backup/data-public.sql")
+
+          lines = src.read_text(encoding="utf-8").splitlines(True)
+          output = []
+          skipping = False
+
+          for line in lines:
+              if line.startswith("COPY auth."):
+                  skipping = True
+                  continue
+
+              if skipping:
+                  if line.rstrip("\r\n") == r"\.":
+                      skipping = False
+                  continue
+
+              output.append(line)
+
+          dst.write_text("".join(output), encoding="utf-8")
+          print("data-public.sql creado correctamente")
+          PY
+
+      - name: Restaurar datos PUBLIC sin duplicar AUTH
         env:
           PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
         run: |
-          sed '/^COPY auth\./,/^\\\.$/d' supabase-backup/data.sql > supabase-backup/data-public.sql
-
           psql \
             --host=aws-0-us-east-2.pooler.supabase.com \
             --port=5432 \
-            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --username=postgres.bbgyjvrnuyagusmjfcrv \
             --dbname=postgres \
             --set=ON_ERROR_STOP=1 \
             --file=supabase-backup/data-public.sql
