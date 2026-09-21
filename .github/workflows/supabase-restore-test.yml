@@ -55,7 +55,7 @@ jobs:
           skipping = False
 
           for line in lines:
-              if line.startswith("COPY auth."):
+              if line.startswith("COPY auth.") or line.startswith("COPY users "):
                   skipping = True
                   continue
 
