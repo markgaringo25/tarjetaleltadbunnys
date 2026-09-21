@@ -1,0 +1,43 @@
+name: Restaurar Supabase - PRUEBA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Descargar respaldo desde la ejecucion #2
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: supabase-backup.yml
+          workflow_conclusion: success
+          name: Bunnys-INK-Supabase-Backup-v1.2
+          path: supabase-backup
+          search_artifacts: true
+
+      - name: Verificar archivos
+        run: |
+          echo "Archivos encontrados:"
+          ls -lah supabase-backup
+
+      - name: Restaurar estructura en PROYECTO VIEJO
+        env:
+          PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
+        run: |
+          psql \
+            --host=aws-0-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --dbname=postgres \
+            --set=ON_ERROR_STOP=1 \
+            --file=supabase-backup/schema.sql
