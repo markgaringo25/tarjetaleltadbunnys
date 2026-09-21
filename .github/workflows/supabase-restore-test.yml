@@ -16,18 +16,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Descargar respaldo desde la ejecucion
+      - name: Descargar respaldo
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: supabase-backup.yml
-          name: bunnys-ink-supabase-backup-v1.2
+          name: Bunnys-INK-Supabase-Backup-v1.2
           path: supabase-backup
           search_artifacts: true
+          workflow_conclusion: success
 
       - name: Verificar archivos
         run: |
-          echo "Archivos encontrados:"
+          echo "======================================"
+          echo "ARCHIVOS DEL RESPALDO"
+          echo "======================================"
           ls -lah supabase-backup
+
+          test -f supabase-backup/schema.sql
+          test -f supabase-backup/data.sql
+
+          echo "Respaldo encontrado correctamente."
 
       - name: Restaurar estructura en PROYECTO VIEJO
         env:
@@ -52,32 +60,33 @@ jobs:
           lines = src.read_text(encoding="utf-8").splitlines(True)
 
           output = []
-          skipping = False
+          keeping = False
 
           for line in lines:
               stripped = line.lstrip()
 
-              if not skipping:
+              if not keeping:
                   if stripped.startswith("COPY ") and (
-                      "auth." in stripped
-                      or '"auth".' in stripped
-                      or stripped.startswith("COPY users ")
-                      or stripped.startswith('COPY "users" ')
+                      "public." in stripped
+                      or '"public".' in stripped
                   ):
-                      skipping = True
-                      continue
-
-                  output.append(line)
+                      keeping = True
+                      output.append(line)
 
               else:
+                  output.append(line)
+
                   if line.strip() == r"\.":
-                      skipping = False
+                      keeping = False
 
           dst.write_text("".join(output), encoding="utf-8")
 
           print("data-public.sql creado correctamente")
           print("Lineas originales:", len(lines))
-          print("Lineas conservadas:", len(output))
+          print("Lineas PUBLIC:", len(output))
+
+          if not output:
+              raise SystemExit("ERROR: No se encontraron datos PUBLIC en data.sql")
           PY
 
       - name: Restaurar datos PUBLIC
@@ -97,7 +106,7 @@ jobs:
           PGPASSWORD: ${{ secrets.OLD_SUPABASE_DB_PASSWORD }}
         run: |
           echo "======================================"
-          echo "VERIFICANDO RESTAURACION"
+          echo "VERIFICANDO TABLAS PUBLIC"
           echo "======================================"
 
           psql \
@@ -115,6 +124,34 @@ jobs:
               ORDER BY tablename;
             "
 
+          echo ""
           echo "======================================"
-          echo "RESTAURACION FINALIZADA"
+          echo "CONTEO DE DATOS"
+          echo "======================================"
+
+          psql \
+            --host=aws-0-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.bbgjvyrnuyagusmjfcrv \
+            --dbname=postgres \
+            --set=ON_ERROR_STOP=1 \
+            --command="
+              SELECT 'profiles' AS tabla, count(*) AS registros FROM public.profiles
+              UNION ALL
+              SELECT 'loyalty_cards', count(*) FROM public.loyalty_cards
+              UNION ALL
+              SELECT 'customer_rewards', count(*) FROM public.customer_rewards
+              UNION ALL
+              SELECT 'stamp_history', count(*) FROM public.stamp_history
+              UNION ALL
+              SELECT 'reward_settings', count(*) FROM public.reward_settings
+              UNION ALL
+              SELECT 'push_campaigns', count(*) FROM public.push_campaigns
+              UNION ALL
+              SELECT 'push_subscriptions', count(*) FROM public.push_subscriptions;
+            "
+
+          echo ""
+          echo "======================================"
+          echo "RESTAURACION FINALIZADA CORRECTAMENTE"
           echo "======================================"
